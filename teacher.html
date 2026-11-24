@@ -70,6 +70,7 @@ table.rk .minib .bnum,table.rk .minib .blab{display:none}
 .sumtab th{background:#f4f1ea}
 .sumtab td{cursor:pointer;font-weight:700}
 .sumtab td.hl{background:#ffe3a3}
+.balg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}.balg>div{display:flex;align-items:center;gap:6px;border-bottom:1px solid #f0ece3;padding:3px 0}.balg .nm{flex:1;font-weight:700}.balg b{font-size:18px;min-width:44px;text-align:right}.x2{background:#fff;color:var(--ink);border:1px solid var(--line);padding:2px 7px;font-size:13px;font-weight:400}
 .glist{display:grid;grid-template-columns:1fr;gap:10px}.gm .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 .pct{display:flex;gap:6px;margin-top:2px}.pct div{flex:1;text-align:center;font-size:14px;color:var(--muted);font-weight:700}
 table.mx{border-collapse:collapse;width:100%;background:#fff;font-size:15px}
@@ -144,7 +145,7 @@ body.proj #projBar{display:flex}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.2;   // index.html 과 같은 값이어야 함
+const APP_VER=20261124.3;   // index.html 과 같은 값이어야 함
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -153,8 +154,9 @@ document.head.insertAdjacentHTML('beforeend','<style>'+DC.css+'</style>');
 function newCode(){ return String(1000+Math.floor(Math.random()*9000)); }
 
 /* ---------- 장부 (이 화면이 원본) ---------- */
-const DEF={code:null, st:1, n:30, ph:'wait', r:0, rolls:'', at:0, res:null, tot:{}, rounds:[], paused:false, pauseMsg:'선생님을 봐 주세요', resetAt:0, view:'duel', dn:null, games:{}, duel:{}, theory:false, hideNames:false};
+const DEF={code:null, st:1, n:30, ph:'wait', r:0, rolls:'', at:0, res:null, tot:{}, rounds:[], paused:false, pauseMsg:'선생님을 봐 주세요', resetAt:0, view:'duel', dn:null, games:{}, duel:{}, pt:{on:true,start:100,max:30,streak:3}, bal:{}, theory:false, hideNames:false};
 let S=Object.assign({},DEF,LS.get('dice-t',{}));
+S.pt=Object.assign({},DEF.pt,S.pt||{}); S.bal=S.bal||{}; S.games=S.games||{}; S.duel=S.duel||{};
 if(!S.code) S.code=newCode();
 function save(){ LS.set('dice-t',S); }
 let LIVE={}, ROOMS={};
@@ -167,7 +169,7 @@ save();
 const FB_OK=!!(window.firebase && window.FB_CONFIG && FB_CONFIG.apiKey && FB_CONFIG.databaseURL);
 let db=null, base=null; if(FB_OK){ try{ firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.error(e); } }
 function cfgObj(){ return {ver:APP_VER, st:S.st, n:S.n, ph:S.ph, r:S.r, rolls:S.rolls||'', at:S.at||0, res:S.res||null,
-  tot:Object.fromEntries(Object.entries(S.tot).map(([k,v])=>[k,{s:v.s,w:v.w,g:v.g}])), dst:S.st, dn:duelN(), rec:Object.fromEntries(Object.entries(S.duel).map(([k,v])=>[k,{w:v.w,l:v.l,d:v.d}])), paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, t:firebase.database.ServerValue.TIMESTAMP}; }
+  tot:Object.fromEntries(Object.entries(S.tot).map(([k,v])=>[k,{s:v.s,w:v.w,g:v.g}])), dst:S.st, dn:duelN(), rec:Object.fromEntries(Object.entries(S.duel).map(([k,v])=>[k,{w:v.w,l:v.l,d:v.d}])), pt:S.pt, bal:S.bal, pair:pairAll(), paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, t:firebase.database.ServerValue.TIMESTAMP}; }
 function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set(cfgObj()).catch(e=>{ $('peerErr').textContent='저장 실패: '+e.message; }); }
 function studentURL(){ return location.href.replace(/[?#].*$/,'').replace(/teacher\.html$/,'')+'?c='+S.code; }
 function showCode(){ $('code').textContent=S.code; $('url').textContent=studentURL(); }
@@ -246,7 +248,7 @@ function setStage(st){ if(S.ph==='bet'){ toast('반 전체 판이 열려 있는 
 function setDN(n){ S.dn=n; save(); writeCfg(); renderAll(); }
 function setN(n){ if(S.ph==='bet'){ toast('판이 열려 있는 동안에는 바꿀 수 없어요'); return; } S.n=n; save(); if(S.ph==='wait') writeCfg(); renderAll(); }
 function togglePause(){ S.paused=!S.paused; S.pauseMsg=$('pauseMsg').value.trim()||DEF.pauseMsg; save(); writeCfg(); renderSide(); }
-function resetAll(){ if(!confirm('모든 학생의 대결 전적, 누적 점수, 판 기록을 지우고 열린 방도 모두 닫을까요? (되돌릴 수 없어요)')) return; S.tot={}; S.rounds=[]; S.games={}; S.duel={}; base&&base.child('rooms').remove().catch(()=>{}); S.res=null; S.ph='wait'; S.rolls=''; S.resetAt=Date.now(); save(); writeCfg(); renderAll(); toast('점수를 초기화했어요'); }
+function resetAll(){ if(!confirm('모든 학생의 대결 전적, 누적 점수, 판 기록을 지우고 열린 방도 모두 닫을까요? (되돌릴 수 없어요)')) return; S.tot={}; S.rounds=[]; S.games={}; S.duel={}; S.bal={}; base&&base.child('rooms').remove().catch(()=>{}); S.res=null; S.ph='wait'; S.rolls=''; S.resetAt=Date.now(); save(); writeCfg(); renderAll(); toast('점수를 초기화했어요'); }
 function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 학생들은 새 코드로 다시 들어와야 해요. (점수 기록은 남아요)')) return; S.code=newCode(); S.ph='wait'; S.res=null; save(); showCode(); openClass(); renderAll(); }
 function setProj(on){ document.body.classList.toggle('proj',on); renderAll(); }
 
@@ -261,7 +263,7 @@ function renderSide(){
   const where={}; for(const rid in ROOMS){ const r=ROOMS[rid]||{}; for(const sl of ['a','b']) if(r[sl]&&r[sl].key&&r[sl].on!==false) where[r[sl].key]=rid; }
   $('stuList').innerHTML=ks.map(k=>{ const L=LIVE[k], t=S.duel[k];
     return `<li><span class="dot ${L.online?'on':''}"></span><span class="nm">${esc(L.name)}${L.ver&&L.ver!==APP_VER?' <span title="학생 화면 새로고침 필요" style="color:var(--x)">⟳</span>':''}</span>
-      ${S.ph==='bet'?(bets[k]?'<span class="ok">✔</span>':'<span class="no">…</span>'):''}${where[k]?`<span class="muted" title="대결 중인 방">⚔${where[k]}</span>`:''}<span class="muted">${t?t.w+'승 '+t.l+'패':''}</span>
+      ${S.ph==='bet'?(bets[k]?'<span class="ok">✔</span>':'<span class="no">…</span>'):''}${where[k]?`<span class="muted" title="대결 중인 방">⚔${where[k]}</span>`:''}<span class="muted">${S.pt.on?'💰'+bal(k)+' ':''}${t?t.w+'승 '+t.l+'패':''}</span>
       <button class="x" title="기기 바꾸기 (이름 풀어 주기)" onclick="kick('${k}')">🔓</button></li>`; }).join('')||'<li class="muted">아직 들어온 학생이 없어요</li>';
   $('phTxt').textContent={wait:'기다리는 중 · [새 판 열기]를 누르면 학생이 칩을 놓을 수 있어요.',bet:`판 열림 · 학생이 칩 ${S.n}개를 놓는 중`,roll:'결과 보는 중'}[S.ph];
   $('openBtn').disabled=S.ph==='bet'; $('rollBtn').disabled=S.ph!=='bet'; $('waitBtn').disabled=S.ph==='wait';
@@ -342,6 +344,11 @@ function showResult(cnt){
 /* ---------- ⚔ 1:1 대결 ----------
    학생 방(dice/{코드}/rooms)을 지켜보다가 끝난 판을 전적에 넣음 (방번호-판번호로 한 번만) */
 function finished(r){ return r&&r.a&&r.b&&r.a.rd&&r.b.rd&&Array.isArray(r.a.c)&&Array.isArray(r.b.c)&&String(r.rolls||'').length>=r.n*(r.st===2?2:1); }
+/* 포인트: 잔액, 같은 상대 연속 판 수 */
+function bal(k){ return S.bal[k]==null?S.pt.start:S.bal[k]; }
+function pairOf(k){ const gs=Object.values(S.games).filter(g=>g.a.key===k||g.b.key===k).sort((a,b)=>b.t-a.t); if(!gs.length) return null;
+  const op=g=>g.a.key===k?g.b.key:g.a.key, o=op(gs[0]); let n=0; for(const g of gs){ if(op(g)===o) n++; else break; } return {op:o,n}; }
+function pairAll(){ const r={}; for(const k in S.duel){ const x=pairOf(k); if(x) r[k]=x; } return r; }
 function ingestRooms(){
   let ch=false;
   for(const rid in ROOMS){ const r=ROOMS[rid]; if(!finished(r)) continue;
@@ -349,7 +356,14 @@ function ingestRooms(){
     const st=r.st, list=DC.decode(st,r.rolls).slice(0,r.n);
     if(!DC.validChips(st,r.n,r.a.c)||!DC.validChips(st,r.n,r.b.c)) continue;
     const sa=DC.sum(DC.hits(st,r.a.c,list)), sb=DC.sum(DC.hits(st,r.b.c,list));
-    S.games[id]={rid,st,n:r.n,rolls:r.rolls,t:Date.now(),a:{name:r.a.name,key:r.a.key,c:r.a.c,s:sa},b:{name:r.b.name,key:r.b.key,c:r.b.c,s:sb}};
+    /* 걸린 점수: 둘이 고른 것 중 작은 쪽, 한 판 최대, 두 사람 잔액 안에서. 같은 상대와 연속 제한을 넘으면 0 */
+    let stake=0;
+    if(S.pt.on){ const pa=pairOf(r.a.key), ok=!(pa&&pa.op===r.b.key&&pa.n>=S.pt.streak);
+      const bet=x=>Math.max(0,Math.floor(+x||0));
+      if(ok) stake=Math.max(0,Math.min(bet(r.a.bet),bet(r.b.bet),S.pt.max,bal(r.a.key),bal(r.b.key)));
+      if(stake&&sa!==sb){ const [w,l]=sa>sb?[r.a.key,r.b.key]:[r.b.key,r.a.key]; S.bal[w]=bal(w)+stake; S.bal[l]=bal(l)-stake; } }
+    base&&base.child('rooms/'+rid+'/stake').set({g:r.g||1,v:stake}).catch(()=>{});   // 학생 화면에 정산 결과 알려 줌
+    S.games[id]={rid,st,n:r.n,rolls:r.rolls,t:Date.now(),stake,a:{name:r.a.name,key:r.a.key,c:r.a.c,s:sa},b:{name:r.b.name,key:r.b.key,c:r.b.c,s:sb}};
     for(const [me,op] of [[r.a,sb],[r.b,sa]]){ const my=me===r.a?sa:sb, t=S.duel[me.key]||(S.duel[me.key]={name:me.name,w:0,l:0,d:0,hit:0,g:0});
       t.name=String(me.name).slice(0,10); t.g++; t.hit+=my; if(my>op) t.w++; else if(my<op) t.l++; else t.d++; }
     ch=true;
@@ -378,13 +392,29 @@ function renderDuel(el){
       <div class="box2"><h4>🏆 전적 (${games.length}판)</h4>
         ${ks.length?`<table class="rk"><tr><th>순</th><th>이름</th><th>승</th><th>패</th><th>무</th><th>평균 맞힘</th></tr>${ks.slice(0,12).map((k,i)=>{ const t=S.duel[k]; return `<tr><td>${i+1}</td><td class="nm">${nm(t.name)}</td><td><b>${t.w}</b></td><td>${t.l}</td><td>${t.d}</td><td>${t.g?(t.hit/t.g).toFixed(1):'-'}</td></tr>`; }).join('')}</table>${ks.length>12?`<div class="muted">… 외 ${ks.length-12}명</div>`:''}`:'<div class="muted">끝난 대결이 아직 없어요</div>'}</div>
     </div>
+    ${ptCard()}
     ${win.length?`<div class="resg"><div class="box2"><h4>😀 이긴 사람들의 동그라미 (평균 · ${win.length}판)</h4><div style="--bh:120px">${DC.boardHTML(st,avg(win),null,{max:Math.ceil(n/3)})}</div></div>
       <div class="box2"><h4>😢 진 사람들의 동그라미 (평균)</h4><div style="--bh:120px">${DC.boardHTML(st,avg(lose),null,{max:Math.ceil(n/3)})}</div></div></div>`:''}
-    ${games.length?`<h4 style="margin:16px 0 6px">최근 대결</h4><div class="glist">${games.slice(0,6).map(g=>{ const list=DC.decode(g.st,g.rolls).slice(0,g.n), R2=DC.rows(g.st,g.n);
-      return `<div class="box2 gm"><div><b>${nm(g.a.name)}</b> ${g.a.s} : ${g.b.s} <b>${nm(g.b.name)}</b> <span class="muted">(${g.st}단계 · 방 ${g.rid})</span></div>
+    ${games.length?`<h4 style="margin:16px 0 6px">최근 대결</h4><div class="glist">${games.slice(0,4).map(g=>{ const list=DC.decode(g.st,g.rolls).slice(0,g.n), R2=DC.rows(g.st,g.n);
+      return `<div class="box2 gm"><div><b>${nm(g.a.name)}</b> ${g.a.s} : ${g.b.s} <b>${nm(g.b.name)}</b> <span class="muted">(${g.st}단계 · 방 ${g.rid}${g.stake?` · 💰${g.stake}점`:''})</span></div>
         <div class="two"><div>${DC.tableHTML(g.st,R2,g.a.c,DC.hits(g.st,g.a.c,list),{small:true})}</div><div>${DC.tableHTML(g.st,R2,g.b.c,DC.hits(g.st,g.b.c,list),{small:true})}</div></div></div>`; }).join('')}</div>`:''}
     <div class="opts"><label><input type="checkbox" ${S.hideNames?'checked':''} onchange="S.hideNames=this.checked;save();renderStage()"> 이름 가리기</label></div>`;
 }
+function ptCard(){
+  const p=S.pt, ks=Object.keys(Object.assign({},S.duel,S.bal,Object.fromEntries(Object.keys(LIVE).map(k=>[k,1])))).sort((a,b)=>bal(b)-bal(a));
+  const nmOf=k=>(LIVE[k]&&LIVE[k].name)||(S.duel[k]&&S.duel[k].name)||fbName(k);
+  return `<div class="box2" style="margin-top:16px"><h4>💰 포인트 <label style="font-weight:400;font-size:15px;margin-left:8px"><input type="checkbox" ${p.on?'checked':''} onchange="setPt('on',this.checked)"> 대결에 포인트 걸기</label></h4>
+    <div class="opts" style="margin-top:0">
+      <label>처음 지급 <input type="number" min="0" max="1000" value="${p.start}" style="width:80px" onchange="setPt('start',this.value)"></label>
+      <label>한 판 최대 <input type="number" min="0" max="500" value="${p.max}" style="width:70px" onchange="setPt('max',this.value)"></label>
+      <label>같은 상대 연속 <input type="number" min="1" max="20" value="${p.streak}" style="width:60px" onchange="setPt('streak',this.value)">판까지</label>
+      <button class="ghost sm" onclick="resetBal()">모두 처음 지급으로</button></div>
+    <div class="muted" style="font-size:13px;margin:4px 0 8px">각자 걸 점수를 고르면 둘 중 작은 점수로 겨루고, 진 사람이 이긴 사람에게 줘요(비기면 그대로). 연속 제한을 넘은 판과 컴퓨터 대결에는 포인트가 걸리지 않아요.</div>
+    ${ks.length?`<div class="balg">${ks.map(k=>`<div><span class="nm">${S.hideNames?'●●●':esc(nmOf(k))}</span><b>${bal(k)}</b><button class="x2" onclick="adjBal('${k}',-10)">−10</button><button class="x2" onclick="adjBal('${k}',10)">+10</button></div>`).join('')}</div>`:''}</div>`;
+}
+function setPt(f,v){ if(f==='on') S.pt.on=!!v; else { v=Math.max(f==='streak'?1:0,Math.floor(+v||0)); S.pt[f]=v; } save(); writeCfg(); renderStage(); }
+function adjBal(k,d){ S.bal[k]=Math.max(0,bal(k)+d); save(); writeCfg(); renderStage(); }
+function resetBal(){ if(!confirm(`모든 학생의 포인트를 ${S.pt.start}점으로 되돌릴까요?`)) return; S.bal={}; save(); writeCfg(); renderStage(); }
 function clearRooms(){ if(!confirm('열린 방을 모두 닫을까요? 대결 중인 학생은 처음 화면으로 돌아가요. (전적은 그대로)')) return; base&&base.child('rooms').remove().then(()=>toast('방을 모두 닫았어요')).catch(e=>toast('실패: '+e.message)); }
 
 /* 🔬 모의실험: 같은 굴림으로 여러 전략을 많은 판 겨룸 */
