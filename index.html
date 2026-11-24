@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주사위 칩 예측</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="dice-core.js"></script>
+<style>
+.wrap{max-width:1000px;margin:0 auto;padding:14px 16px 60px}
+#home .box{max-width:460px;margin:36px auto 0}
+h1{font-size:32px;font-weight:900;text-align:center;margin-bottom:2px}
+.sub{text-align:center;color:var(--muted);margin-bottom:22px}
+label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
+#home input{width:100%;font-size:20px}
+#classCode{font-size:34px!important;text-align:center;letter-spacing:12px;font-weight:900}
+#classState{margin-top:14px;font-size:15px;color:var(--muted);line-height:1.5;min-height:1.5em}
+#classState.ok{color:var(--o);font-weight:700}
+.solo{display:block;text-align:center;margin-top:28px;font-size:15px;color:var(--muted)}
+.top{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.top .ttl{font-weight:900;font-size:19px;flex:1;min-width:160px}
+.pill{background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:14px;font-weight:700}
+.pill .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#bbb;margin-right:6px}
+.pill .dot.on{background:var(--o)}
+.pill.tot{background:var(--ink);color:#fff;border-color:var(--ink)}
+.phase-h{font-size:24px;font-weight:900;margin:2px 0 2px}
+.phase-d{color:var(--muted);margin-bottom:12px}
+.left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 4px}
+.left .big{font-size:26px;font-weight:900}
+.left .big.full{color:var(--o)}
+.left .sp{flex:1}
+.left button{font-size:19px;padding:14px 22px}
+.sent{background:var(--o-soft);border:2px solid var(--o);border-radius:12px;padding:10px 14px;font-weight:700;margin-top:10px}
+.sent.warn{background:var(--t-soft);border-color:var(--t)}
+.rollbox{display:flex;align-items:center;gap:16px;justify-content:center;min-height:96px;margin-bottom:6px}
+.rollbox .cnt{font-size:20px;font-weight:900;color:var(--muted);min-width:110px}
+.rollbox .sumv{font-size:40px;font-weight:900;font-family:"Times New Roman",serif}
+.score{text-align:center;margin:12px 0 6px}
+.score .n{font-size:54px;font-weight:900;color:var(--o);line-height:1.1}
+.score .r{font-size:20px;font-weight:700}
+.think{background:var(--acc-soft);border-radius:14px;padding:12px 16px;margin-top:12px;font-weight:700;line-height:1.7}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.mini .card{--bh:120px;margin:0}
+.mini h4{font-size:15px;margin-bottom:4px}
+.hist{width:100%;border-collapse:collapse;font-size:15px;background:#fff}
+.hist td,.hist th{border-bottom:1px solid #eee7da;padding:6px;text-align:center}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.cards button{flex:1;min-width:200px;background:#fff;color:var(--ink);border:2px solid var(--line);padding:14px}
+.cards button.sel{border-color:var(--acc);background:var(--acc-soft)}
+@media (max-width:700px){ .mini{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- 첫 화면 -->
+  <div id="home">
+    <div class="box card">
+      <h1>🎲 주사위 칩 예측</h1>
+      <div class="sub">주사위를 여러 번 굴리면 무엇이 몇 번 나올까?</div>
+      <label class="small">번호와 이름 (예: 7 김민준)</label>
+      <input id="myName" maxlength="10" autocomplete="off">
+      <label class="small">수업 코드 (선생님 화면의 숫자 4개)</label>
+      <input id="classCode" maxlength="4" inputmode="numeric" autocomplete="off">
+      <button class="acc" style="width:100%;margin-top:16px;font-size:20px;padding:15px" onclick="joinClick()">수업 들어가기</button>
+      <div id="classState"></div>
+    </div>
+    <a class="solo" href="?solo=1">🤖 혼자 연습하기 (수업 연결 없이)</a>
+  </div>
+
+  <!-- 게임 화면 -->
+  <div id="main" class="hide">
+    <div class="top">
+      <div class="ttl" id="stageTtl">🎲 주사위 칩 예측</div>
+      <span class="pill" id="who"></span>
+      <span class="pill tot" id="totPill">누적 0점</span>
+      <span class="pill"><span class="dot" id="connDot"></span><span id="connTxt">연결 중</span></span>
+    </div>
+    <div class="card" id="view"></div>
+    <div class="card hide" id="histCard"><h4 style="margin-bottom:6px">📒 나의 기록</h4><div id="histBox"></div></div>
+  </div>
+</div>
+
+<div class="overlay" id="pauseOv"><div class="box"><div style="font-size:44px">✋</div><div id="pauseMsg" style="font-size:24px;font-weight:900;margin-top:6px">선생님을 봐 주세요</div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const APP_VER=20261124.1;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
+const Q=new URLSearchParams(location.search);
+const SOLO=Q.has('solo')||Q.has('demo');
+let toastT; function toast(t,ms){ const el=$('toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('on'),ms||2600); }
+document.head.insertAdjacentHTML('beforeend','<style>'+DC.css+'</style>');
+const normName=s=>String(s||'').replace(/\s+/g,' ').trim().slice(0,10);
+const nameOk=s=>/\d/.test(s)&&/[가-힣A-Za-z]/.test(s);
+const myName=()=>normName($('myName').value);
+
+/* ---------- 상태 ---------- */
+let CFG={ph:'wait'};          // 선생님 화면이 정한 것
+let MY={chips:null, r:null, sentSig:null, sent:null};   // 이번 판 내 칩
+let OFFSET=0;                 // 서버 시계와 차이
+let HIST=[];                  // 내 기록 [{r,st,n,s,rk,cnt}]
+let animT=null, shownR=null;
+const now=()=>Date.now()+OFFSET;
+const histKey=()=>'dice-hist-'+(SOLO?'solo':(CL.code+'-'+myName()));
+
+/* ---------- 화면 ---------- */
+function setTop(){
+  $('stageTtl').textContent='🎲 '+(CFG.st?DC.stageName(CFG.st):'주사위 칩 예측');
+  const t=SOLO?HIST.reduce((s,h)=>s+h.s,0):((CFG.tot||{})[CL.key]||{}).s||0;
+  $('totPill').textContent=SOLO?`최고 ${HIST.reduce((m,h)=>Math.max(m,h.s),0)}점`:`누적 ${t}점`;
+}
+function render(){
+  setTop(); renderHist();
+  if(SOLO&&CFG.ph==='wait') return renderSoloPick();
+  if(CFG.ph==='bet') return renderBet();
+  if(CFG.ph==='roll') return renderRoll();
+  stopAnim();
+  $('view').innerHTML=`<div class="phase-h">⏳ 잠시 기다려요</div><div class="phase-d">선생님이 새 판을 열면 칩을 놓을 수 있어요.</div>
+    <div style="text-align:center;margin:16px 0">${[1,2,3,4,5,6].map(v=>DC.dieSVG(v,54)).join(' ')}</div>`;
+}
+function chipsOk(){ return MY.chips && MY.chips.length===DC.outs(CFG.st).length; }
+function renderBet(){
+  stopAnim();
+  const st=CFG.st, n=CFG.n;
+  if(MY.r!==CFG.r||!chipsOk()){ MY.r=CFG.r; MY.chips=LS.get('dice-chips-'+st+'-'+n,null); if(!MY.chips||MY.chips.length!==DC.outs(st).length||DC.sum(MY.chips)>n) MY.chips=DC.outs(st).map(()=>0); MY.sentSig=null; MY.sent=null; }
+  const what=st===2?'주사위 두 개를 함께 굴려 나온 두 눈의 합':'주사위 한 개를 굴려 나온 눈';
+  $('view').innerHTML=`<div class="phase-h">🪙 칩 ${n}개를 놓으세요</div>
+    <div class="phase-d">${what}을 <b>${n}번</b> 기록해요. 각 수가 <b>몇 번 나올지</b> 예상해서 칩을 놓으세요.<br>나중에 <b>실제로 나온 횟수와 겹친 칩</b>만큼 점수가 돼요. (막대를 누르거나 끌어도 돼요)</div>
+    <div id="bwrap" style="--bh:${st===2?240:270}px"></div>
+    <div class="left"><span class="big" id="leftTxt"></span><span class="sp"></span>
+      <button class="ghost" onclick="clearChips()">모두 빼기</button>
+      <button class="acc" id="sendBtn" onclick="sendBet()">제출하기</button></div>
+    <div id="sentBox"></div>`;
+  drawBoard(); updLeft();
+}
+function drawBoard(){
+  const w=$('bwrap'); if(!w) return;
+  w.innerHTML=DC.boardHTML(CFG.st,MY.chips,null,{edit:true,max:DC.editMax(CFG.n,MY.chips)});
+  DC.bindBoard(w,()=>MY.chips,setChips,CFG.n);
+}
+function setChips(c,flag){
+  if(CFG.ph!=='bet') return;
+  MY.chips=c; LS.set('dice-chips-'+CFG.st+'-'+CFG.n,c);
+  if(!DC.patchBoard($('bwrap'),c)) drawBoard();
+  updLeft(); if(flag==='full') toast('칩을 다 놓았어요. 다른 곳에서 빼야 더 놓을 수 있어요',1800);
+}
+function clearChips(){ setChips(DC.outs(CFG.st).map(()=>0)); }
+function updLeft(){
+  const left=CFG.n-DC.sum(MY.chips), el=$('leftTxt'); if(!el) return;
+  el.textContent=left?`남은 칩 ${left}개`:'✔ 칩을 다 놓았어요'; el.classList.toggle('full',!left);
+  $('sendBtn').disabled=!!left;
+  const sig=MY.chips.join(','), box=$('sentBox');
+  if(SOLO){ $('sendBtn').textContent='🎲 굴리기'; box.innerHTML=''; return; }
+  box.innerHTML = MY.sentSig==null ? '' : MY.sentSig===sig
+    ? `<div class="sent">✔ 제출했어요. 선생님이 굴리기 전까지는 고쳐서 다시 제출할 수 있어요.</div>`
+    : `<div class="sent warn">✏ 칩을 고쳤어요. [제출하기]를 다시 눌러야 바뀐 칩으로 겨뤄요.</div>`;
+}
+function sendBet(){
+  if(DC.sum(MY.chips)!==CFG.n) return;
+  if(SOLO) return soloRoll();
+  const c=MY.chips.slice(), sig=c.join(','), r=CFG.r;
+  me().child('bet').set({r, c, t:TS}).then(()=>{ if(CFG.r===r){ MY.sentSig=sig; MY.sent=c; updLeft(); toast('제출했어요'); } }).catch(e=>toast('제출 실패: '+e.message,4000));
+}
+
+/* 굴리기 보여 주기: 모두 같은 시각(서버 시간)에 맞춰 하나씩 */
+function animDur(n){ return Math.min(9000, n*220); }
+function stopAnim(){ cancelAnimationFrame(animT); animT=null; }
+function renderRoll(){
+  const st=CFG.st, n=CFG.n, list=DC.decode(st,CFG.rolls);
+  const mine=MY.r===CFG.r&&MY.sent&&MY.sent.length===DC.outs(st).length?MY.sent:null;
+  const res=CFG.res||{}, myS=res.sc?res.sc[CL.key]:(SOLO&&mine?DC.score(mine,DC.counts(st,list)):undefined);
+  $('view').innerHTML=`<div class="phase-h" id="rollH">🎲 굴리는 중…</div>
+    <div class="rollbox" id="rollBox"></div>
+    <div id="bwrap" style="--bh:${st===2?220:250}px"></div>
+    <div class="legend">${mine?'<span><i class="lc"></i>내 칩</span>':''}<span><i class="la"></i>실제로 나온 횟수</span>${mine?'<span><i class="lo"></i>겹친 칩 = 점수</span>':''}</div>
+    <div id="after"></div>`;
+  const dur=animDur(n), start=SOLO?CFG.at:(+CFG.at||0);
+  let lastK=-1;
+  const step=()=>{
+    const t=now()-start, k=Math.max(0,Math.min(n, Math.floor(t/dur*n)+1));
+    if(k!==lastK){ lastK=k;
+      const part=list.slice(0,k), cnt=DC.counts(st,part), x=part[k-1];
+      $('bwrap').innerHTML=DC.boardHTML(st,mine,cnt,{max:Math.max(Math.ceil(n/(st===2?4:3)),...(mine||[0]))});
+      $('rollBox').innerHTML = x ? (st===2?`${DC.dieSVG(x.a,80)}${DC.dieSVG(x.b,80)}<span class="sumv">= ${x.v}</span>`:DC.dieSVG(x.a,90))+`<span class="cnt">${k} / ${n}번째</span>`:'';
+      if(k>=n){ finish(mine,cnt,myS); return; }
+    }
+    animT=requestAnimationFrame(step);
+  };
+  stopAnim();
+  step();
+}
+function finish(mine,cnt,myS){
+  stopAnim();
+  const st=CFG.st, res=CFG.res||{};
+  $('rollH').textContent='🎲 결과';
+  let h='';
+  if(mine&&myS!=null){
+    const rk=res.rk&&res.rk[CL.key];
+    h+=`<div class="score"><div class="muted">내 점수 (겹친 칩)</div><div class="n">${myS}점</div>${rk?`<div class="r">반에서 ${rk}등 <span class="muted">/ ${res.cnt}명</span></div>`:''}</div>`;
+  } else if(!SOLO) h+=`<div class="sent warn" style="text-align:center">이번 판에는 칩을 제출하지 않았어요.</div>`;
+  if(!SOLO&&res.top&&res.top.length){
+    h+=`<div class="mini"><div class="card"><h4>🥇 이번 판 1등의 칩 (${res.best}점)</h4>${DC.boardHTML(st,res.top[0],null,{max:Math.ceil(CFG.n/3)})}</div>
+      ${mine?`<div class="card"><h4>🙋 내 칩 (${myS}점)</h4>${DC.boardHTML(st,mine,null,{max:Math.ceil(CFG.n/3)})}</div>`:''}</div>`;
+  }
+  h+=`<div class="think">🤔 ${st===2?'어떤 합이 많이 나왔나요? 그 합이 왜 많이 나올까요? 두 주사위의 눈을 짝지어 생각해 보세요.':'점수를 많이 받으려면 칩을 어떻게 놓는 게 좋을까요? 1등의 칩 모양과 내 칩 모양을 비교해 보세요.'}</div>`;
+  if(SOLO) h+=`<div style="text-align:center;margin-top:14px"><button class="acc" style="font-size:19px;padding:14px 26px" onclick="soloAgain()">다시 하기</button> <button class="ghost" onclick="CFG={ph:'wait'};render()">단계 바꾸기</button></div>`;
+  $('after').innerHTML=h;
+  if(mine&&myS!=null&&shownR!==CFG.r){ shownR=CFG.r;
+    HIST=HIST.filter(x=>x.r!==CFG.r); HIST.unshift({r:CFG.r,st,n:CFG.n,s:myS,rk:res.rk?res.rk[CL.key]:null,cnt:res.cnt||null}); HIST=HIST.slice(0,40); LS.set(histKey(),HIST); renderHist(); setTop(); }
+}
+function renderHist(){
+  if(!HIST.length){ $('histCard').classList.add('hide'); return; }
+  $('histCard').classList.remove('hide');
+  $('histBox').innerHTML=`<table class="hist"><tr><th>판</th><th>단계</th><th>칩</th><th>점수</th>${SOLO?'':'<th>등수</th>'}</tr>${HIST.slice(0,12).map((h,i)=>`<tr><td>${HIST.length-i}</td><td>${h.st}단계</td><td>${h.n}개</td><td><b>${h.s}</b></td>${SOLO?'':`<td>${h.rk?h.rk+'등 / '+h.cnt+'명':'-'}</td>`}</tr>`).join('')}</table>`;
+}
+
+/* ---------- 혼자 연습 ---------- */
+let soloSt=1, soloN=30;
+function renderSoloPick(){
+  stopAnim();
+  $('view').innerHTML=`<div class="phase-h">🤖 혼자 연습하기</div><div class="phase-d">칩을 놓고 컴퓨터가 주사위를 굴려요. 점수를 가장 높게 받는 방법을 찾아보세요.</div>
+    <div class="cards">${[1,2].map(s=>`<button class="${s===soloSt?'sel':''}" onclick="soloSt=${s};soloN=DC.nOpts(${s})[0];renderSoloPick()"><b>${DC.stageName(s)}</b></button>`).join('')}</div>
+    <div class="cards">${DC.nOpts(soloSt).map(n=>`<button class="${n===soloN?'sel':''}" onclick="soloN=${n};renderSoloPick()">${n}번 굴리기 · 칩 ${n}개</button>`).join('')}</div>
+    <button class="acc" style="width:100%;font-size:20px;padding:15px" onclick="soloAgain()">시작</button>`;
+}
+function soloAgain(){ CFG={ph:'bet',st:soloSt,n:soloN,r:'s'+Date.now()}; MY.r=null; render(); }
+function soloRoll(){ MY.sentSig=MY.chips.join(','); MY.sent=MY.chips.slice(); CFG=Object.assign({},CFG,{ph:'roll',rolls:DC.roll(CFG.st,CFG.n),at:now()}); render(); }
+
+/* ---------- 수업 연결 (Firebase Realtime Database) ----------
+   dice/{코드}/cfg            ← 선생님이 씀: 단계, 판 번호, 굴린 결과, 점수, 멈춤
+   dice/{코드}/stu/{이름}/bet  ← 내 칩 (내가 씀)
+   dice/{코드}/stu/{이름}/p    ← 접속 표시 (내가 씀)
+------------------------------------------------------------ */
+const FB_OK=!SOLO&&!!(window.firebase && window.FB_CONFIG && FB_CONFIG.apiKey && FB_CONFIG.databaseURL);
+let db=null; if(FB_OK){ try{ firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.error(e); } }
+const TS=FB_OK?firebase.database.ServerValue.TIMESTAMP:0;
+const CL={code:null,key:null,base:null,connected:false};
+let deviceId; try{ deviceId=sessionStorage.getItem('dice-tab'); if(!deviceId){ deviceId=Math.random().toString(36).slice(2,12); sessionStorage.setItem('dice-tab',deviceId);} }catch(e){ deviceId=Math.random().toString(36).slice(2,12); }
+const fbKey=n=>encodeURIComponent(n).replace(/\./g,'%2E');
+function setState(t,ok){ const el=$('classState'); el.textContent=t; el.classList.toggle('ok',!!ok); }
+function me(){ return CL.base.child('stu/'+CL.key); }
+function applyCfg(c){
+  if(!c) return;
+  const prev=CFG; CFG=c;
+  $('pauseOv').classList.toggle('on',!!c.paused); if(c.pauseMsg) $('pauseMsg').textContent=c.pauseMsg;
+  const v=+c.ver||0; if(v&&v!==APP_VER&&CL.verWarn!==v){ CL.verWarn=v; toast(v>APP_VER?'⚠ 새 버전이 있어요. 이 화면을 새로고침해 주세요.':'⚠ 선생님 화면이 옛 버전이에요. 선생님께 새로고침을 부탁하세요.',6000); }
+  if(c.resetAt && c.resetAt>LS.get(histKey()+'-reset',0)){ LS.set(histKey()+'-reset',c.resetAt); HIST=[]; LS.set(histKey(),HIST); }
+  /* 같은 판·같은 단계에서 점수표만 바뀐 경우엔 다시 그리지 않음 */
+  if(prev.ph===c.ph&&prev.r===c.r&&prev.rolls===c.rolls&&JSON.stringify(prev.res)===JSON.stringify(c.res)){ setTop(); return; }
+  render();
+}
+function joinClick(){
+  const code=$('classCode').value.replace(/\D/g,''), nm=myName();
+  if(!nm){ setState('먼저 번호와 이름을 입력하세요.'); $('myName').focus(); return; }
+  if(!nameOk(nm)){ setState('번호와 이름을 함께 써 주세요. (예: 7 김민준)'); $('myName').focus(); return; }
+  $('myName').value=nm;
+  if(code.length!==4){ setState('수업 코드 4자리를 입력하세요.'); return; }
+  LS.set('dice-name',nm); LS.set('dice-class',code);
+  connect(code);
+}
+function showMain(){ $('home').classList.add('hide'); $('main').classList.remove('hide'); $('who').textContent='👤 '+(SOLO?'연습':myName()); HIST=LS.get(histKey(),[]); render(); }
+function goHome(){ disconnect(); stopAnim(); $('pauseOv').classList.remove('on'); $('main').classList.add('hide'); $('home').classList.remove('hide'); setState(''); }
+function setConn(on){ CL.connected=on; $('connDot').classList.toggle('on',on); $('connTxt').textContent=on?'연결됨':'연결 끊김 · 다시 연결하는 중'; }
+function disconnect(){
+  clearTimeout(CL.joinT);
+  if(CL.base){ try{ me().child('uid').off(); me().child('p').update({online:false}).catch(()=>{}); me().child('p').onDisconnect().cancel().catch(()=>{}); }catch(e){} try{ CL.base.child('cfg').off(); }catch(e){} }
+  try{ db&&db.ref('.info/connected').off(); }catch(e){}
+  CL.base=null; CL.code=null; setConn(false);
+}
+function connect(code){
+  if(!FB_OK||!db){ setState('⚠ 연결 설정(firebase-config.js)이 아직 없어요. 선생님께 알려 주세요.'); return; }
+  disconnect(); CL.code=code; setState('수업을 찾는 중…');
+  const base=db.ref('dice/'+code), my=code;
+  CL.joinT=setTimeout(()=>{ if(CL.code===my&&!CL.base) setState('⏳ 서버 응답이 늦어요. 와이파이를 확인하세요. 계속 기다리는 중…'); },10000);
+  let cfgSnap=null;
+  authReady().then(uid=>(CL.uid=uid, base.child('cfg').once('value').then(snap=>{
+    if(CL.code!==my) return;
+    if(!snap.exists()){ clearTimeout(CL.joinT); CL.code=null; setState(`수업 ${code}을(를) 찾지 못했어요. 선생님 화면이 열려 있는지, 코드가 맞는지 확인하세요.`); return; }
+    cfgSnap=snap; CL.key=fbKey(myName()); CL.base=base;
+    return me().child('uid').set(uid).then(()=>me().child('bet').once('value')).catch(e=>{
+      if(CL.code!==my) return;
+      const err=new Error(isDenied(e)?`'${myName()}' 이름은 다른 기기에서 이미 쓰고 있어요. 번호와 이름이 맞는지 확인하세요. 기기를 바꿨다면 선생님께 [🔓 기기 바꾸기]를 부탁하세요.`:'연결 오류: '+e.message);
+      err.ui=true; throw err;
+    });
+  }))).then(bs=>{
+    if(CL.code!==my||!cfgSnap||!bs) return;
+    clearTimeout(CL.joinT);
+    const b=bs.val(), c=cfgSnap.val()||{};
+    if(b&&b.r===c.r&&DC.validChips(c.st,c.n,b.c)){ MY={chips:b.c.slice(),r:c.r,sentSig:b.c.join(','),sent:b.c}; }   // 새로고침해도 제출한 칩 그대로
+    showMain(); applyCfg(c);
+    db.ref('.info/connected').on('value',s=>{ const on=!!s.val(); if(on&&CL.base===base){ const p=me().child('p'); p.onDisconnect().update({online:false}); p.update({online:true,name:myName(),dev:deviceId,ver:APP_VER,t:TS}); } setConn(on); });
+    db.ref('.info/serverTimeOffset').on('value',s=>{ OFFSET=+s.val()||0; });
+    base.child('cfg').on('value',s=>applyCfg(s.val()));
+    me().child('uid').on('value',s=>{ if(CL.base===base && s.val()!==CL.uid) kicked(); }, ()=>{ if(CL.base===base) kicked(); });
+    setState(`✔ 수업 ${code}에 연결됨`,true);
+  }).catch(e=>{ if(CL.code!==my) return; clearTimeout(CL.joinT); CL.code=null; CL.base=null; setState('❌ '+(e.ui?e.message:authMsg(e))); });
+}
+let authP=null;
+function authReady(){
+  if(!authP) authP=new Promise((res,rej)=>{
+    const un=firebase.auth().onAuthStateChanged(u=>{ un();
+      if(u) res(u.uid); else firebase.auth().signInAnonymously().then(c=>res(c.user.uid)).catch(e=>{ authP=null; rej(e); }); });
+  });
+  return authP;
+}
+function isDenied(e){ return /permission|denied/i.test(String((e&&(e.code||''))+' '+(e&&e.message||''))); }
+function authMsg(e){
+  const c=String(e&&e.code||'');
+  if(/admin-restricted|operation-not-allowed/.test(c)) return '익명 로그인이 꺼져 있어요. 선생님께 알려 주세요.';
+  if(isDenied(e)) return '데이터베이스가 접근을 막았어요. 선생님께 알려 주세요. ('+e.message+')';
+  return '연결 오류: '+(e&&e.message||e);
+}
+function kicked(){ const nm=myName(); goHome(); setState(`'${nm}' 이름이 다른 기기로 넘어갔어요. 번호와 이름을 확인하고 다시 들어오세요.`); }
+
+/* ---------- 시작 ---------- */
+(function init(){
+  const n=normName(LS.get('dice-name','')); if(n) $('myName').value=n;
+  if(SOLO){ $('connTxt').textContent='혼자 연습 (연결 없음)'; showMain(); return; }
+  let code=Q.get('c'); if(!(code&&/^\d{4}$/.test(code))) code=LS.get('dice-class',null);
+  if(!FB_OK) setState('⚠ 연결 설정(firebase-config.js)이 아직 없어요.');
+  if(code){ $('classCode').value=code; if(nameOk(n)) setTimeout(()=>connect(code),200); else setState('번호와 이름을 입력하고 [수업 들어가기]를 누르세요.'); }
+})();
+$('myName').addEventListener('change',()=>{ const v=normName($('myName').value); $('myName').value=v; LS.set('dice-name',v); });
+</script>
+</body>
+</html>

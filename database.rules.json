@@ -1,0 +1,89 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "classes": {
+      "$code": {
+        ".validate": "$code.matches(/^[0-9]{4}$/)",
+        ".read": "auth != null && (data.child('owner').val() === auth.uid || data.child('owners').child(auth.uid).exists())",
+        "owner": {
+          ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
+        },
+        "keys": {
+          ".write": "auth != null && (root.child('classes').child($code).child('owner').val() === auth.uid || root.child('classes').child($code).child('owners').child(auth.uid).exists())",
+          "$key": {
+            ".validate": "$key.matches(/^[A-Z2-9]{6}$/) && newData.val() === true"
+          }
+        },
+        "owners": {
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid && newData.isString() && root.child('classes').child($code).child('keys').child(newData.val()).val() === true"
+          }
+        },
+        "cfg": {
+          ".read": "auth != null",
+          ".write": "auth != null && (root.child('classes').child($code).child('owner').val() === auth.uid || root.child('classes').child($code).child('owners').child(auth.uid).exists())"
+        },
+        "stu": {
+          ".write": "auth != null && (root.child('classes').child($code).child('owner').val() === auth.uid || root.child('classes').child($code).child('owners').child(auth.uid).exists())",
+          "$key": {
+            ".validate": "$key.length > 0 && $key.length <= 100",
+            ".read": "auth != null && data.child('uid').val() === auth.uid",
+            ".write": "auth != null && (!data.child('uid').exists() || data.child('uid').val() === auth.uid) && newData.child('uid').val() === auth.uid",
+            "uid": {
+              ".validate": "newData.isString()"
+            },
+            "rec": {
+              ".validate": "newData.hasChildren()"
+            },
+            "p": {
+              ".validate": "newData.hasChildren()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "dice": {
+      "$code": {
+        ".validate": "$code.matches(/^[0-9]{4}$/)",
+        ".read": "auth != null && data.child('owner').val() === auth.uid",
+        "owner": {
+          ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
+        },
+        "cfg": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('dice').child($code).child('owner').val() === auth.uid"
+        },
+        "stu": {
+          ".write": "auth != null && root.child('dice').child($code).child('owner').val() === auth.uid",
+          "$key": {
+            ".validate": "$key.length > 0 && $key.length <= 100",
+            ".read": "auth != null && data.child('uid').val() === auth.uid",
+            ".write": "auth != null && (!data.child('uid').exists() || data.child('uid').val() === auth.uid) && newData.child('uid').val() === auth.uid",
+            "uid": {
+              ".validate": "newData.isString()"
+            },
+            "p": {
+              ".validate": "newData.hasChildren()"
+            },
+            "bet": {
+              ".validate": "newData.hasChildren(['r','c'])"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

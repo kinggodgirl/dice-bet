@@ -1,0 +1,38 @@
+/* 학생·교사 화면 공통 */
+:root{
+  --ink:#1d2433; --paper:#f4f1ea; --card:#fff; --line:#ddd6c8; --muted:#6b6f78;
+  --acc:#2f5d9e; --acc-soft:#e6eef9;
+  --o:#2e8b57; --o-soft:#e3f3ea; --t:#d99a00; --t-soft:#fdf3d6; --x:#cf3f54; --x-soft:#fbe5e8;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%}
+body{font-family:"Noto Sans KR",system-ui,sans-serif;font-size:18px;color:var(--ink);background:var(--paper);line-height:1.55}
+button{font-family:inherit;font-size:17px;font-weight:700;cursor:pointer;border:none;border-radius:12px;padding:12px 16px;background:var(--ink);color:#fff;transition:transform .05s}
+button:active{transform:scale(.97)}
+button,input,select{touch-action:manipulation}   /* 두 번 눌러 확대되는 것 막기 (손가락 확대는 됨) */
+button:disabled{opacity:.35;cursor:default;transform:none}
+button.ghost{background:#fff;color:var(--ink);border:2px solid var(--line)}
+button.acc{background:var(--acc)}
+input,select{font:inherit;padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+.muted{color:var(--muted);font-size:15px}
+.hide{display:none!important}
+/* 수학 글자 */
+.ptext{font-weight:700;line-height:1.9}
+.mv{font-family:"Times New Roman",Times,serif;font-style:italic;font-size:1.08em}
+.arc,.ov{font-family:"Times New Roman",Times,serif;font-weight:400;font-size:1.1em}
+.arc{position:relative;display:inline-block;padding-top:.15em}
+.arc::before{content:"";position:absolute;left:8%;right:8%;top:-.02em;height:.38em;border:1.6px solid currentColor;border-bottom:none;border-radius:50% 50% 0 0/100% 100% 0 0}
+.ov{display:inline-block;border-top:1.6px solid currentColor;line-height:1.1;padding-top:1px}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.86em;line-height:1.15;margin:0 2px}
+.fr>span:first-child{border-bottom:1.5px solid currentColor;padding:0 3px}
+.fig{width:100%;height:auto;display:block}
+/* 진단 표시 */
+.mk{display:inline-flex;align-items:center;justify-content:center;width:1.6em;height:1.6em;border-radius:50%;font-weight:900;font-size:.9em}
+.mk.o{background:var(--o-soft);color:var(--o)}.mk.t{background:var(--t-soft);color:var(--t)}.mk.x{background:var(--x-soft);color:var(--x)}
+/* 덮개 */
+.overlay{position:fixed;inset:0;background:rgba(20,24,34,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.overlay.on{display:flex}
+.overlay .box{background:#fff;border-radius:20px;padding:26px;max-width:520px;width:100%;text-align:center}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-weight:700;transition:transform .25s;z-index:60;max-width:90%}
+.toast.on{transform:translateX(-50%) translateY(0)}
