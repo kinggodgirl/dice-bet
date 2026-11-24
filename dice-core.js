@@ -145,5 +145,57 @@ DC.patchBoard = (root,chips) => {
     if(t) t.textContent=c; });
   return true;
 };
+
+/* ---------- 1:1 대결 ---------- */
+DC.duelN = st => st===2 ? [24,18] : [12,18];        // 대결 한 판에 굴리는 횟수 = 동그라미 개수 (첫째가 기본)
+DC.rows = (st,n) => st===2 ? 8 : Math.ceil(n*2/3);  // 표의 줄 수 (한 칸에 놓을 수 있는 최대 동그라미)
+/* 컴퓨터 상대의 동그라미: 그 단계 전략 중 하나를 무작위로 (표 줄 수 안으로 맞춤) */
+DC.botPlan = (st,n) => {
+  const R=DC.rows(st,n), L=DC.outs(st).length;
+  const kinds = st===2
+    ? [{name:'모두 고르게',w:DC.outs(2).map(()=>1)},{name:'7 근처에 많이',w:DC.outs(2).map(v=>6-Math.abs(v-7))},{name:'아무렇게나',w:null},{name:'큰 수 좋아',w:DC.outs(2).map(v=>v>=8?3:1)}]
+    : [{name:'모두 고르게',w:[1,1,1,1,1,1]},{name:'아무렇게나',w:null},{name:'6이 좋아',w:[1,1,1,1,1,4]},{name:'홀수 좋아',w:[3,1,3,1,3,1]}];
+  const k=kinds[Math.floor(Math.random()*kinds.length)];
+  const c=new Array(L).fill(0);
+  if(!k.w){ for(let i=0;i<n;){ const j=Math.floor(Math.random()*L); if(c[j]<R){ c[j]++; i++; } } return {name:k.name,c}; }
+  const t=k.w.reduce((a,b)=>a+b), raw=k.w.map(x=>x/t*n);
+  raw.forEach((x,i)=>c[i]=Math.min(R,Math.floor(x)));
+  const order=raw.map((x,i)=>[x-Math.floor(x)+Math.random()*0.01,i]).sort((a,b)=>b[0]-a[0]);
+  for(let left=n-DC.sum(c),k2=0; left>0 && k2<1000; k2++){ const i=order[k2%L][1]; if(c[i]<R){ c[i]++; left--; } }
+  return {name:k.name,c};
+};
+/* 동그라미 표: c = 칸별 동그라미 수, hit = 칸별 맞힌 수, opt.edit(눌러서 놓기), opt.last(방금 나온 칸 번호) */
+DC.tableHTML = (st,rows,c,hit,opt) => {
+  opt=opt||{}; const o=DC.outs(st);
+  let h=`<div class="dtab ${opt.edit?'edit':''} ${opt.small?'small':''} s${st}" style="--cols:${o.length};--rows:${rows}">`;
+  o.forEach((v,i)=>{
+    const ci=c?c[i]||0:0, hi=hit?hit[i]||0:0;
+    h+=`<div class="dcol ${opt.last===i?'last':''}" data-i="${i}"><div class="dcnt">${opt.hideCnt?'':(hit&&ci?`<b>${hi}</b>/`:'')+(opt.hideCnt?'':ci)}</div>`;
+    for(let r=rows-1;r>=0;r--){
+      const cls = r<hi?'hit':(r<ci?'on':'');
+      h+=`<div class="dcell ${cls}" data-i="${i}" data-r="${r}">${cls==='hit'?'✔':(cls==='on'?'':'')}</div>`;
+    }
+    h+=`<div class="dlab">${v}</div></div>`;
+  });
+  return h+'</div>';
+};
+DC.css += `
+.dtab{display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:4px;user-select:none;-webkit-user-select:none}
+.dcol{display:flex;flex-direction:column;gap:4px;border-radius:10px;padding:2px}
+.dcol.last{background:#ffe3a3}
+.dcnt{text-align:center;font-weight:900;font-size:15px;color:#b8730a;height:20px}
+.dcnt b{color:#2e8b57}
+.dcell{aspect-ratio:1/1;max-height:48px;border:2px solid #ddd6c8;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:18px;margin:0 auto;width:100%;max-width:48px}
+.dtab.edit .dcell{cursor:pointer}
+.dcell.on{border:4px solid #d9930f;background:#fff8e8}
+.dcell.hit{border:4px solid #2e8b57;background:#2e8b57}
+.dlab{text-align:center;font-weight:900;font-size:22px;font-family:"Times New Roman",Times,serif;border-top:3px solid #1d2433;padding-top:2px}
+.dtab.s2 .dlab{font-size:18px}
+.dtab.small .dcell{max-width:22px;max-height:22px;border-width:2px;font-size:11px}
+.dtab.small .dcell.on,.dtab.small .dcell.hit{border-width:3px}
+.dtab.small{gap:2px}.dtab.small .dcol{gap:2px}.dtab.small .dlab{font-size:15px}.dtab.small .dcnt{font-size:12px;height:16px}
+`;
+/* 맞힌 수: 굴린 결과 순서대로, 그 칸에 남은 동그라미가 있으면 하나씩 체크 */
+DC.hits = (st,c,list) => { const o=DC.outs(st), h=o.map(()=>0); for(const x of list){ const i=o.indexOf(x.v); if(i>=0&&h[i]<(c[i]||0)) h[i]++; } return h; };
 window.DC = DC;
 })();

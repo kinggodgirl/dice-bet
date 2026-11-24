@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>주사위 칩 예측</title>
+<title>주사위 동그라미 대결</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
@@ -53,7 +53,30 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 .cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .cards button{flex:1;min-width:200px;background:#fff;color:var(--ink);border:2px solid var(--line);padding:14px}
 .cards button.sel{border-color:var(--acc);background:var(--acc-soft)}
-@media (max-width:700px){ .mini{grid-template-columns:1fr} }
+.lobby{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lobby .big{font-size:21px;padding:18px}
+.joinrow{display:flex;gap:6px}.joinrow input{flex:1;min-width:0;font-size:24px;text-align:center;letter-spacing:6px;font-weight:900}
+.rooms{display:flex;flex-direction:column;gap:8px}
+.rooms button{display:flex;align-items:center;gap:14px;background:#fff;color:var(--ink);border:2px solid var(--line);text-align:left;font-size:18px}
+.rooms .rn{font-size:24px;font-weight:900;color:var(--acc);letter-spacing:2px}.rooms .go{margin-left:auto;color:var(--acc)}
+.ridbig{font-size:96px;font-weight:900;letter-spacing:16px;text-align:center;color:var(--acc);line-height:1.2}
+.vs{font-weight:700;color:var(--muted);margin-bottom:4px}.okb{background:var(--o-soft);color:var(--o);border-radius:8px;padding:1px 8px;font-size:14px}
+.score2{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;text-align:center;gap:10px;margin-bottom:6px}
+.score2>div{border:2px solid var(--line);border-radius:14px;padding:6px;font-weight:700}
+.score2>div.t{border-color:var(--acc);background:var(--acc-soft)}
+.score2 b{font-size:36px;color:var(--o)}
+.score2 .kk{border:none;font-size:20px;color:var(--muted)}
+.diebox{display:flex;align-items:center;justify-content:center;gap:12px;min-height:110px}
+.diebox .sumv{font-size:44px;font-weight:900;font-family:"Times New Roman",serif}
+.die.spin{transform:rotate(12deg)}
+.rollbtn{font-size:26px;padding:18px 48px;border-radius:16px}
+.wait{font-size:20px;font-weight:700;color:var(--muted);padding:16px}
+.result{text-align:center;font-size:34px;font-weight:900;border-radius:16px;padding:12px;margin-bottom:12px}
+.result span{display:block;font-size:26px}
+.result.win{background:var(--o-soft);color:var(--o)}.result.lose{background:var(--x-soft);color:var(--x)}.result.draw{background:#eee;color:#555}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.two h4{margin-bottom:4px}
+.rollsum{margin-top:12px}
+@media (max-width:700px){ .mini,.two,.lobby{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -61,8 +84,8 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
   <!-- 첫 화면 -->
   <div id="home">
     <div class="box card">
-      <h1>🎲 주사위 칩 예측</h1>
-      <div class="sub">주사위를 여러 번 굴리면 무엇이 몇 번 나올까?</div>
+      <h1>🎲 주사위 동그라미 대결</h1>
+      <div class="sub">주사위를 여러 번 굴리면 무엇이 많이 나올까?</div>
       <label class="small">번호와 이름 (예: 7 김민준)</label>
       <input id="myName" maxlength="10" autocomplete="off">
       <label class="small">수업 코드 (선생님 화면의 숫자 4개)</label>
@@ -70,13 +93,13 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
       <button class="acc" style="width:100%;margin-top:16px;font-size:20px;padding:15px" onclick="joinClick()">수업 들어가기</button>
       <div id="classState"></div>
     </div>
-    <a class="solo" href="?solo=1">🤖 혼자 연습하기 (수업 연결 없이)</a>
+    <a class="solo" href="?solo=1">🤖 혼자 연습하기 (컴퓨터와 대결 · 수업 연결 없이)</a>
   </div>
 
   <!-- 게임 화면 -->
   <div id="main" class="hide">
     <div class="top">
-      <div class="ttl" id="stageTtl">🎲 주사위 칩 예측</div>
+      <div class="ttl" id="stageTtl">🎲 주사위 동그라미 대결</div>
       <span class="pill" id="who"></span>
       <span class="pill tot" id="totPill">누적 0점</span>
       <span class="pill"><span class="dot" id="connDot"></span><span id="connTxt">연결 중</span></span>
@@ -90,7 +113,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.1;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261124.2;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -113,18 +136,23 @@ const histKey=()=>'dice-hist-'+(SOLO?'solo':(CL.code+'-'+myName()));
 
 /* ---------- 화면 ---------- */
 function setTop(){
-  $('stageTtl').textContent='🎲 '+(CFG.st?DC.stageName(CFG.st):'주사위 칩 예측');
+  const inClass=CFG.ph==='bet'||CFG.ph==='roll', ds=ROOM&&ROOM.d?ROOM.d.st:duelSet().st;
+  $('stageTtl').textContent=(inClass&&!ROOM?'🪙 ':'⚔ ')+DC.stageName(inClass&&!ROOM?CFG.st:ds);
+  if(!SOLO&&!(inClass&&!ROOM)){ const R=rec(); $('totPill').textContent=`전적 ${R.w}승 ${R.l}패`; return; }
   const t=SOLO?HIST.reduce((s,h)=>s+h.s,0):((CFG.tot||{})[CL.key]||{}).s||0;
   $('totPill').textContent=SOLO?`최고 ${HIST.reduce((m,h)=>Math.max(m,h.s),0)}점`:`누적 ${t}점`;
 }
+let SOLOMODE='duel';   // 혼자 연습: 'duel'(컴퓨터와 대결) | 'chip'(칩 예측 연습)
 function render(){
   setTop(); renderHist();
-  if(SOLO&&CFG.ph==='wait') return renderSoloPick();
+  if(ROOM){ stopAnim(); return renderRoom(); }
+  if(SOLO&&SOLOMODE==='chip'){ if(CFG.ph==='wait') return renderSoloPick(); }
   if(CFG.ph==='bet') return renderBet();
   if(CFG.ph==='roll') return renderRoll();
   stopAnim();
-  $('view').innerHTML=`<div class="phase-h">⏳ 잠시 기다려요</div><div class="phase-d">선생님이 새 판을 열면 칩을 놓을 수 있어요.</div>
-    <div style="text-align:center;margin:16px 0">${[1,2,3,4,5,6].map(v=>DC.dieSVG(v,54)).join(' ')}</div>`;
+  const v=$('ridIn')&&$('ridIn').value, f=document.activeElement&&document.activeElement.id==='ridIn';
+  renderLobby();
+  if(v&&$('ridIn')){ $('ridIn').value=v; if(f) $('ridIn').focus(); }
 }
 function chipsOk(){ return MY.chips && MY.chips.length===DC.outs(CFG.st).length; }
 function renderBet(){
@@ -211,7 +239,7 @@ function finish(mine,cnt,myS){
       ${mine?`<div class="card"><h4>🙋 내 칩 (${myS}점)</h4>${DC.boardHTML(st,mine,null,{max:Math.ceil(CFG.n/3)})}</div>`:''}</div>`;
   }
   h+=`<div class="think">🤔 ${st===2?'어떤 합이 많이 나왔나요? 그 합이 왜 많이 나올까요? 두 주사위의 눈을 짝지어 생각해 보세요.':'점수를 많이 받으려면 칩을 어떻게 놓는 게 좋을까요? 1등의 칩 모양과 내 칩 모양을 비교해 보세요.'}</div>`;
-  if(SOLO) h+=`<div style="text-align:center;margin-top:14px"><button class="acc" style="font-size:19px;padding:14px 26px" onclick="soloAgain()">다시 하기</button> <button class="ghost" onclick="CFG={ph:'wait'};render()">단계 바꾸기</button></div>`;
+  if(SOLO) h+=`<div style="text-align:center;margin-top:14px"><button class="acc" style="font-size:19px;padding:14px 26px" onclick="soloAgain()">다시 하기</button> <button class="ghost" onclick="CFG={ph:'wait'};render()">처음으로</button></div>`;
   $('after').innerHTML=h;
   if(mine&&myS!=null&&shownR!==CFG.r){ shownR=CFG.r;
     HIST=HIST.filter(x=>x.r!==CFG.r); HIST.unshift({r:CFG.r,st,n:CFG.n,s:myS,rk:res.rk?res.rk[CL.key]:null,cnt:res.cnt||null}); HIST=HIST.slice(0,40); LS.set(histKey(),HIST); renderHist(); setTop(); }
@@ -229,10 +257,193 @@ function renderSoloPick(){
   $('view').innerHTML=`<div class="phase-h">🤖 혼자 연습하기</div><div class="phase-d">칩을 놓고 컴퓨터가 주사위를 굴려요. 점수를 가장 높게 받는 방법을 찾아보세요.</div>
     <div class="cards">${[1,2].map(s=>`<button class="${s===soloSt?'sel':''}" onclick="soloSt=${s};soloN=DC.nOpts(${s})[0];renderSoloPick()"><b>${DC.stageName(s)}</b></button>`).join('')}</div>
     <div class="cards">${DC.nOpts(soloSt).map(n=>`<button class="${n===soloN?'sel':''}" onclick="soloN=${n};renderSoloPick()">${n}번 굴리기 · 칩 ${n}개</button>`).join('')}</div>
-    <button class="acc" style="width:100%;font-size:20px;padding:15px" onclick="soloAgain()">시작</button>`;
+    <button class="acc" style="width:100%;font-size:20px;padding:15px" onclick="soloAgain()">시작</button>
+    <button class="ghost" style="width:100%;margin-top:8px" onclick="SOLOMODE='duel';render()">← 컴퓨터와 대결로</button>`;
 }
 function soloAgain(){ CFG={ph:'bet',st:soloSt,n:soloN,r:'s'+Date.now()}; MY.r=null; render(); }
 function soloRoll(){ MY.sentSig=MY.chips.join(','); MY.sent=MY.chips.slice(); CFG=Object.assign({},CFG,{ph:'roll',rolls:DC.roll(CFG.st,CFG.n),at:now()}); render(); }
+
+/* ---------- 1:1 동그라미 대결 ----------
+   dice/{코드}/rooms/{방번호} = {st, n, g(몇 번째 판), a:{uid,name,key,on,c,rd}, b:{…}, rolls:'굴린 결과', t}
+   a 가 방을 만든 사람. 굴리는 차례: 굴린 횟수가 짝수면 a, 홀수면 b.
+------------------------------------------------------------ */
+let ROOM=null;              // {rid, slot, d(방 데이터), bot}
+let ROOMS={};               // 수업의 모든 방 (기다리는 방 목록용)
+let SHOWN=0, rollAnimT=null, rolling=false;
+let DRAFT=null;             // 내가 놓는 중인 동그라미
+const other=s=>s==='a'?'b':'a';
+const step=st=>st===2?2:1;
+function duelSet(){ return SOLO?{st:soloSt,n:DC.duelN(soloSt)[0]}:{st:+CFG.dst||1,n:+CFG.dn||DC.duelN(+CFG.dst||1)[0]}; }
+function rec(){ return ((CFG.rec||{})[CL.key])||{w:0,l:0,d:0}; }
+
+function renderLobby(){
+  const {st,n}=duelSet();
+  const open=Object.entries(ROOMS).filter(([rid,r])=>r&&r.a&&!r.b&&r.a.on&&r.st===st&&r.n===n&&r.a.key!==CL.key).sort((x,y)=>(y[1].t||0)-(x[1].t||0));
+  const R=rec();
+  $('view').innerHTML=`<div class="phase-h">⚔ 1:1 동그라미 대결</div>
+    <div class="phase-d"><b>${DC.stageName(st)}</b> · 동그라미 <b>${n}개</b>를 표에 놓고, 둘이 번갈아 <b>${n}번</b> 굴려요.<br>${st===2?'두 주사위 눈의 합':'나온 눈'}에 내 동그라미가 있으면 ✔ 맞힘! 더 많이 맞힌 사람이 이겨요.</div>
+    ${SOLO?`<div class="cards">${[1,2].map(s=>`<button class="${s===soloSt?'sel':''}" onclick="soloSt=${s};render()"><b>${DC.stageName(s)}</b></button>`).join('')}</div>`:''}
+    ${SOLO?'':`<div class="lobby">
+      <button class="acc big" onclick="createRoom()">＋ 방 만들기</button>
+      <div class="joinrow"><input id="ridIn" maxlength="3" inputmode="numeric" placeholder="방 번호"><button onclick="joinRoom($('ridIn').value)">들어가기</button></div>
+    </div>
+    <h4 style="margin:14px 0 6px">🚪 친구가 기다리는 방</h4>
+    <div class="rooms">${open.length?open.map(([rid,r])=>`<button onclick="joinRoom('${rid}')"><span class="rn">${rid}</span><span>${esc(r.a.name)}</span><span class="go">들어가기 ▶</span></button>`).join(''):'<div class="muted">아직 없어요. 방을 만들거나 친구에게 방 번호를 물어보세요.</div>'}</div>`}
+    <button class="${SOLO?'acc':'ghost'}" style="width:100%;margin-top:16px;${SOLO?'font-size:20px;padding:15px':''}" onclick="botRoom()">🤖 컴퓨터와 대결하기</button>
+    ${SOLO?`<button class="ghost" style="width:100%;margin-top:8px" onclick="SOLOMODE='chip';CFG={ph:'wait'};render()">🪙 칩 예측 혼자 연습</button>`:''}
+    ${SOLO?'':`<div class="muted" style="margin-top:10px;text-align:center">내 전적: ${R.w}승 ${R.l}패 ${R.d}무 <span style="font-size:13px">(컴퓨터와 한 대결은 빼고)</span></div>`}`;
+}
+function newRoomData(st,n,me){ return {st,n,g:1,a:me,rolls:'',t:SOLO?Date.now():TS}; }
+function myInfo(){ return {uid:CL.uid||'me',name:SOLO?'나':myName(),key:CL.key||'me',on:true}; }
+function createRoom(tries=0){
+  const {st,n}=duelSet(), rid=String(100+Math.floor(Math.random()*900));
+  const ref=CL.base.child('rooms/'+rid);
+  ref.once('value').then(s=>{
+    if(s.exists()&&tries<8) return createRoom(tries+1);
+    return ref.set(newRoomData(st,n,myInfo())).then(()=>enterRoom(rid,'a'));
+  }).catch(e=>toast('방을 만들지 못했어요: '+e.message,4000));
+}
+function joinRoom(rid){
+  rid=String(rid||'').replace(/\D/g,''); if(rid.length!==3){ toast('방 번호 3자리를 넣으세요'); return; }
+  const ref=CL.base.child('rooms/'+rid);
+  ref.once('value').then(s=>{
+    const r=s.val();
+    if(!r||!r.a){ toast('그런 방이 없어요'); return; }
+    if(r.a.key===CL.key){ return enterRoom(rid,'a'); }
+    if(r.b&&r.b.key===CL.key){ return enterRoom(rid,'b'); }
+    if(r.b){ toast('이미 두 명이 들어간 방이에요'); return; }
+    return ref.child('b').set(myInfo()).then(()=>enterRoom(rid,'b'));
+  }).catch(e=>toast(isDenied(e)?'방에 들어가지 못했어요 (이미 다른 친구가 들어갔어요)':'오류: '+e.message,4000));
+}
+function enterRoom(rid,slot){
+  const ref=CL.base.child('rooms/'+rid);
+  ROOM={rid,slot,d:null,bot:false}; SHOWN=-1; DRAFT=null;
+  ref.child(slot).onDisconnect().update({on:false});
+  ref.child(slot).update({on:true});
+  ref.on('value',s=>{ if(!ROOM||ROOM.rid!==rid||ROOM.bot) return; const d=s.val();
+    if(!d){ ROOM=null; toast('방이 없어졌어요'); render(); return; }
+    onRoom(d); });
+  LS.set('dice-room',{code:CL.code,rid,slot});
+}
+function leaveRoom(){
+  if(!ROOM) return;
+  if(!ROOM.bot&&CL.base){ const ref=CL.base.child('rooms/'+ROOM.rid), d=ROOM.d||{};
+    ref.off(); ref.child(ROOM.slot).onDisconnect().cancel().catch(()=>{});
+    const op=d[other(ROOM.slot)];
+    if(!d.b||(op&&op.on===false)) ref.remove().catch(()=>{}); else ref.child(ROOM.slot).update({on:false}).catch(()=>{}); }
+  clearTimeout(rollAnimT); clearTimeout(botT); ROOM=null; rolling=false; LS.set('dice-room',null); render();
+}
+/* 방 데이터가 바뀜 → 새로 굴린 게 있으면 굴리는 모습을 먼저 보여 줌 */
+function onRoom(d){
+  const prevG=ROOM.d&&ROOM.d.g; ROOM.d=d;
+  if(prevG!==d.g){ SHOWN=-1; DRAFT=null; }
+  const cnt=Math.floor(String(d.rolls||'').length/step(d.st));
+  if(SHOWN<0||cnt<SHOWN){ SHOWN=cnt; return renderRoom(); }   // 처음 들어옴 / 새 판
+  if(cnt>SHOWN&&!rolling) return animRoll();
+  if(!rolling) renderRoom();
+}
+function animRoll(){
+  const d=ROOM.d, st=d.st, list=DC.decode(st,d.rolls), x=list[SHOWN];
+  rolling=true; renderRoom();
+  let i=0; const box=$('dieBox');
+  const spin=()=>{ if(!ROOM){ rolling=false; return; } i++;
+    const a=1+Math.floor(Math.random()*6), b=1+Math.floor(Math.random()*6);
+    if(box) box.innerHTML=st===2?DC.dieSVG(a,84,'spin')+DC.dieSVG(b,84,'spin'):DC.dieSVG(a,96,'spin');
+    if(i<8) rollAnimT=setTimeout(spin,80);
+    else { SHOWN++; rolling=false; LAST=x; renderRoom(); const c2=Math.floor(String(ROOM.d.rolls||'').length/step(st)); if(c2>SHOWN) setTimeout(animRoll,350); else botTurn(); }
+  };
+  spin();
+}
+let LAST=null;
+function renderRoom(){
+  const d=ROOM.d; if(!d) { $('view').innerHTML='<div class="muted">방에 들어가는 중…</div>'; return; }
+  const st=d.st, n=d.n, R=DC.rows(st,n), me=d[ROOM.slot]||{}, op=d[other(ROOM.slot)]||null;
+  const list=DC.decode(st,d.rolls).slice(0,Math.max(0,SHOWN)), k=list.length;
+  const opName=op?esc(op.name):'';
+  setTop();
+  /* ① 상대 기다리기 */
+  if(!op){
+    $('view').innerHTML=`<div class="phase-h">🚪 방 번호</div><div class="ridbig">${ROOM.rid}</div>
+      <div class="phase-d" style="text-align:center">친구에게 방 번호를 알려 주세요. 친구가 들어오면 바로 시작해요.</div>
+      <div style="text-align:center"><button class="ghost" onclick="leaveRoom()">방 닫기</button></div>`; return;
+  }
+  /* ② 동그라미 놓기 */
+  if(!me.rd){
+    if(!DRAFT||DRAFT.length!==DC.outs(st).length) DRAFT=DC.outs(st).map(()=>0);
+    const left=n-DC.sum(DRAFT);
+    $('view').innerHTML=`<div class="vs">나 <b>vs</b> ${opName}${op.rd?' <span class="okb">놓기 끝</span>':''}</div>
+      <div class="phase-h">⭕ 동그라미 ${n}개를 놓으세요</div>
+      <div class="phase-d">${st===2?'두 주사위 눈의 합':'주사위 눈'}이 몇 번 나올지 생각해서 칸을 눌러 동그라미를 놓아요. 다시 누르면 빠져요.</div>
+      <div id="tabw">${DC.tableHTML(st,R,DRAFT,null,{edit:true})}</div>
+      <div class="left"><span class="big ${left?'':'full'}">${left?`남은 동그라미 ${left}개`:'✔ 다 놓았어요'}</span><span class="sp"></span>
+        <button class="ghost" onclick="DRAFT=null;renderRoom()">모두 지우기</button>
+        <button class="acc" ${left?'disabled':''} onclick="placeDone()">놓기 끝 ▶</button></div>
+      <div style="text-align:right;margin-top:10px"><button class="ghost sm" onclick="if(confirm('방에서 나갈까요?'))leaveRoom()">나가기</button></div>`;
+    $('tabw').querySelectorAll('.dcell').forEach(el=>el.onclick=()=>{
+      const i=+el.dataset.i, r=+el.dataset.r;
+      if(r<DRAFT[i]) DRAFT[i]--; else if(DC.sum(DRAFT)>=n) return toast('동그라미를 다 놓았어요. 다른 칸에서 빼야 더 놓을 수 있어요',1800); else if(DRAFT[i]<R) DRAFT[i]++;
+      renderRoom(); });
+    return;
+  }
+  const myHit=DC.hits(st,me.c||[],list), opHit=op.c?DC.hits(st,op.c,list):null;
+  const ms=DC.sum(myHit), os=opHit?DC.sum(opHit):0;
+  const lastI=LAST&&k?DC.outs(st).indexOf(list[k-1].v):null;
+  /* ③ 상대가 아직 놓는 중 */
+  if(!op.rd){
+    $('view').innerHTML=`<div class="vs">나 <b>vs</b> ${opName}</div><div class="phase-h">⏳ ${opName}이(가) 동그라미를 놓는 중이에요</div>
+      <div id="tabw">${DC.tableHTML(st,R,me.c,null,{})}</div>`; return;
+  }
+  /* ④ 끝 */
+  if(k>=n&&!rolling){
+    const res=ms>os?'win':ms<os?'lose':'draw';
+    $('view').innerHTML=`<div class="result ${res}">${res==='win'?'🎉 이겼어요!':res==='lose'?'😢 졌어요':'🤝 비겼어요'} <span>${ms} : ${os}</span></div>
+      <div class="two"><div><h4>🙋 나 · 맞힘 ${ms}개</h4>${DC.tableHTML(st,R,me.c,myHit,{small:st===2})}</div>
+        <div><h4>${ROOM.bot?'🤖 ':''}${opName} · 맞힘 ${os}개${ROOM.bot&&ROOM.botName?` <span class="muted">(${esc(ROOM.botName)})</span>`:''}</h4>${DC.tableHTML(st,R,op.c,opHit,{small:st===2})}</div></div>
+      <div class="rollsum"><b>실제로 나온 횟수</b><div style="--bh:90px">${DC.boardHTML(st,null,DC.counts(st,list),{max:Math.max(3,...DC.counts(st,list))})}</div></div>
+      <div class="think">🤔 ${st===2?'많이 나온 합은 무엇인가요? 그 합에 동그라미를 많이 놓은 사람이 유리했나요? 왜 그 합이 많이 나올까요?':'두 사람의 동그라미 모양을 비교해 보세요. 한 칸에 많이 몰아 놓으면 어떻게 될까요?'}</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px"><button class="acc" style="font-size:19px;padding:14px 26px" onclick="rematch()">🔁 다시 하기</button><button class="ghost" onclick="leaveRoom()">나가기</button></div>`;
+    return;
+  }
+  /* ⑤ 굴리기 */
+  const turn=k%2===0?'a':'b', mine=turn===ROOM.slot&&!rolling;
+  const x=k?list[k-1]:null;
+  $('view').innerHTML=`<div class="score2"><div class="${turn===ROOM.slot?'t':''}">🙋 나<br><b>${ms}</b></div><div class="kk">${k} / ${n}번</div><div class="${turn!==ROOM.slot?'t':''}">${ROOM.bot?'🤖 ':''}${opName}<br><b>${os}</b></div></div>
+    <div class="diebox" id="dieBox">${x?(st===2?DC.dieSVG(x.a,84)+DC.dieSVG(x.b,84)+`<span class="sumv">= ${x.v}</span>`:DC.dieSVG(x.a,96)):'<span class="muted">처음 굴리기를 기다려요</span>'}</div>
+    <div style="text-align:center;margin-bottom:12px">${mine?`<button class="acc rollbtn" onclick="doRoll()">🎲 굴리기</button>`:`<div class="wait">${rolling?'굴리는 중…':`${opName}의 차례예요`}</div>`}</div>
+    <div id="tabw">${DC.tableHTML(st,R,me.c,myHit,{last:lastI})}</div>
+    ${op.on===false&&!ROOM.bot?`<div class="sent warn" style="margin-top:10px">${opName}의 연결이 끊겼어요. 기다리거나 <button class="sm ghost" onclick="leaveRoom()">나가기</button></div>`:''}`;
+}
+function placeDone(){
+  const d=ROOM.d; if(DC.sum(DRAFT)!==d.n) return;
+  const c=DRAFT.slice();
+  if(ROOM.bot){ d.a.c=c; d.a.rd=true; onRoom(d); return; }
+  CL.base.child('rooms/'+ROOM.rid+'/'+ROOM.slot).update({c,rd:true}).catch(e=>toast('저장 실패: '+e.message,4000));
+}
+function doRoll(){
+  const d=ROOM.d, st=d.st, k=Math.floor(String(d.rolls||'').length/step(st));
+  if(rolling||k>=d.n||(k%2===0?'a':'b')!==ROOM.slot) return;
+  const nr=String(d.rolls||'')+DC.roll(st,1);
+  if(ROOM.bot){ d.rolls=nr; onRoom(d); return; }
+  CL.base.child('rooms/'+ROOM.rid+'/rolls').set(nr).catch(e=>toast('굴리기 실패: '+e.message,4000));
+}
+function rematch(){
+  const d=ROOM.d;
+  if(ROOM.bot){ const p=DC.botPlan(d.st,d.n); ROOM.botName=p.name; const nd={st:d.st,n:d.n,g:d.g+1,a:{name:'나',on:true},b:{name:'컴퓨터',on:true,c:p.c,rd:true},rolls:''}; onRoom(nd); return; }
+  const u={g:(d.g||1)+1, rolls:'', 'a/c':null,'a/rd':null,'b/c':null,'b/rd':null};
+  CL.base.child('rooms/'+ROOM.rid).update(u).catch(e=>toast('실패: '+e.message,4000));
+}
+/* 🤖 컴퓨터 상대 (이 기기 안에서만) */
+let botT=null;
+function botRoom(){
+  const {st,n}=duelSet(), p=DC.botPlan(st,n);
+  ROOM={rid:'🤖',slot:'a',bot:true,botName:p.name,d:null}; SHOWN=-1; DRAFT=null;
+  onRoom({st,n,g:1,a:{name:'나',on:true},b:{name:'컴퓨터',on:true,c:p.c,rd:true},rolls:''});
+}
+function botTurn(){
+  if(!ROOM||!ROOM.bot) return; const d=ROOM.d, k=Math.floor(d.rolls.length/step(d.st));
+  if(!d.a.rd||k>=d.n||k%2===0) return;
+  clearTimeout(botT); botT=setTimeout(()=>{ if(!ROOM||!ROOM.bot||ROOM.d!==d) return; d.rolls+=DC.roll(d.st,1); onRoom(d); },900);
+}
 
 /* ---------- 수업 연결 (Firebase Realtime Database) ----------
    dice/{코드}/cfg            ← 선생님이 씀: 단계, 판 번호, 굴린 결과, 점수, 멈춤
@@ -254,7 +465,8 @@ function applyCfg(c){
   const v=+c.ver||0; if(v&&v!==APP_VER&&CL.verWarn!==v){ CL.verWarn=v; toast(v>APP_VER?'⚠ 새 버전이 있어요. 이 화면을 새로고침해 주세요.':'⚠ 선생님 화면이 옛 버전이에요. 선생님께 새로고침을 부탁하세요.',6000); }
   if(c.resetAt && c.resetAt>LS.get(histKey()+'-reset',0)){ LS.set(histKey()+'-reset',c.resetAt); HIST=[]; LS.set(histKey(),HIST); }
   /* 같은 판·같은 단계에서 점수표만 바뀐 경우엔 다시 그리지 않음 */
-  if(prev.ph===c.ph&&prev.r===c.r&&prev.rolls===c.rolls&&JSON.stringify(prev.res)===JSON.stringify(c.res)){ setTop(); return; }
+  if(ROOM){ setTop(); return; }   // 대결 중에는 대결 화면 그대로
+  if(prev.ph===c.ph&&prev.r===c.r&&prev.rolls===c.rolls&&JSON.stringify(prev.res)===JSON.stringify(c.res)&&(c.ph!=='wait'||(prev.dst===c.dst&&prev.dn===c.dn&&JSON.stringify(prev.rec)===JSON.stringify(c.rec)))){ setTop(); return; }
   render();
 }
 function joinClick(){
@@ -267,11 +479,11 @@ function joinClick(){
   connect(code);
 }
 function showMain(){ $('home').classList.add('hide'); $('main').classList.remove('hide'); $('who').textContent='👤 '+(SOLO?'연습':myName()); HIST=LS.get(histKey(),[]); render(); }
-function goHome(){ disconnect(); stopAnim(); $('pauseOv').classList.remove('on'); $('main').classList.add('hide'); $('home').classList.remove('hide'); setState(''); }
+function goHome(){ leaveRoom(); disconnect(); stopAnim(); $('pauseOv').classList.remove('on'); $('main').classList.add('hide'); $('home').classList.remove('hide'); setState(''); }
 function setConn(on){ CL.connected=on; $('connDot').classList.toggle('on',on); $('connTxt').textContent=on?'연결됨':'연결 끊김 · 다시 연결하는 중'; }
 function disconnect(){
   clearTimeout(CL.joinT);
-  if(CL.base){ try{ me().child('uid').off(); me().child('p').update({online:false}).catch(()=>{}); me().child('p').onDisconnect().cancel().catch(()=>{}); }catch(e){} try{ CL.base.child('cfg').off(); }catch(e){} }
+  if(CL.base){ try{ me().child('uid').off(); me().child('p').update({online:false}).catch(()=>{}); me().child('p').onDisconnect().cancel().catch(()=>{}); }catch(e){} try{ CL.base.child('cfg').off(); CL.base.child('rooms').off(); }catch(e){} }
   try{ db&&db.ref('.info/connected').off(); }catch(e){}
   CL.base=null; CL.code=null; setConn(false);
 }
@@ -300,6 +512,9 @@ function connect(code){
     db.ref('.info/serverTimeOffset').on('value',s=>{ OFFSET=+s.val()||0; });
     base.child('cfg').on('value',s=>applyCfg(s.val()));
     me().child('uid').on('value',s=>{ if(CL.base===base && s.val()!==CL.uid) kicked(); }, ()=>{ if(CL.base===base) kicked(); });
+    base.child('rooms').on('value',s=>{ ROOMS=s.val()||{}; if(!ROOM&&CFG.ph!=='bet'&&CFG.ph!=='roll') render(); }, ()=>{});
+    const lr=LS.get('dice-room',null);   // 새로고침 전에 있던 방으로
+    if(lr&&lr.code===code){ base.child('rooms/'+lr.rid).once('value').then(s=>{ const r=s.val(); if(r&&r[lr.slot]&&r[lr.slot].key===CL.key&&!ROOM) enterRoom(lr.rid,lr.slot); }).catch(()=>{}); }
     setState(`✔ 수업 ${code}에 연결됨`,true);
   }).catch(e=>{ if(CL.code!==my) return; clearTimeout(CL.joinT); CL.code=null; CL.base=null; setState('❌ '+(e.ui?e.message:authMsg(e))); });
 }

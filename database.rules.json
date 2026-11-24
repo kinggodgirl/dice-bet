@@ -80,6 +80,14 @@
             }
           }
         },
+        "rooms": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('dice').child($code).child('owner').val() === auth.uid",
+          "$rid": {
+            ".validate": "$rid.matches(/^[0-9]{3}$/)",
+            ".write": "auth != null && ((!data.exists() && newData.child('a/uid').val() === auth.uid) || data.child('a/uid').val() === auth.uid || data.child('b/uid').val() === auth.uid || (!data.child('b').exists() && newData.child('b/uid').val() === auth.uid))"
+          }
+        },
         "$other": {
           ".validate": false
         }
