@@ -12,6 +12,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="dice-core.js"></script>
+<script src="slides.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 body{font-size:16px}
 .wrap{max-width:1400px;margin:0 auto;padding:14px 18px 40px}
@@ -86,6 +88,43 @@ body.proj .sh{font-size:38px}body.proj .sd{font-size:22px}
 body.proj .board .bnum{font-size:22px}body.proj .board .blab{font-size:30px}
 #projBar{display:none;gap:8px;align-items:center}
 body.proj #projBar{display:flex}
+
+/* 📽 수업 슬라이드 (곱의 법칙 PPT 모양) */
+#sl{display:none;position:fixed;inset:0;z-index:150;background:#222}
+#sl.on{display:block}
+#slFrame{position:absolute;width:1600px;height:900px;transform-origin:0 0;background:#fff;overflow:hidden;font-size:34px;color:#1d2433}
+#slNav{position:absolute;left:0;right:0;bottom:0;height:44px;display:flex;align-items:center;gap:8px;padding:0 10px;background:#111;color:#ddd}
+#slNav button{background:#333;color:#eee;padding:5px 12px;font-size:14px;border-radius:8px}
+#slNav button.acc{background:#d9690f}
+#slNav .sp{flex:1}#slNav .code2{font-size:15px}#slNav .code2 b{color:#ffb35c;font-size:20px;letter-spacing:3px}
+.shd{height:120px;background:#000;display:flex;align-items:center;padding:0 60px}
+.shd>.ed{flex:1;color:#f07c1e;font-size:60px;font-weight:700;letter-spacing:2px;text-align:center}
+.stag{color:#fff;font-size:28px;line-height:1.3;text-align:right;min-width:160px}
+.ed[contenteditable=true]{outline:3px dashed #f07c1e;outline-offset:4px;min-width:40px;min-height:1em}
+#slFrame .ed b{color:#f07c1e;font-weight:700}
+.scover{display:grid;grid-template-columns:1fr 1fr;height:100%}
+.scover .dice{background:#1d2433;display:grid;grid-template-columns:repeat(3,1fr);place-items:center;padding:120px 60px}
+.scover .ctext{display:flex;flex-direction:column;justify-content:center;padding:0 70px;color:#f07c1e}
+.scover .ctext>div:nth-child(1){font-size:34px;color:#7a5af0}
+.scover .ctext>div:nth-child(2){font-size:64px;margin-top:20px}
+.scover .ctext>div:nth-child(3){font-size:48px;margin-top:6px}
+.sgoal{padding:60px 110px;font-size:52px;line-height:1.6}
+.sgoal .gl{margin-top:30px}.sgoal .ed{padding-left:110px}
+.sjoin{display:grid;grid-template-columns:1.25fr 1fr;gap:40px;padding:50px 70px;font-size:40px;line-height:1.7}
+.sjoin .jr{text-align:center}.sjoin .qr{display:inline-block;padding:14px;background:#fff;border:2px solid #ddd;min-height:300px}
+.sjoin .jc{font-size:44px;margin-top:14px}.sjoin .jc b{font-size:84px;letter-spacing:10px}.sjoin .ju{font-size:22px;color:#6b6f78;word-break:break-all}
+.stext{padding:46px 80px;font-size:38px;line-height:1.75}
+.stext p{margin-bottom:14px}.stext .center{text-align:center}.stext .big{font-size:46px}.stext .note{font-size:32px;color:#6b6f78}
+.blank{display:inline-block;min-width:200px;border-bottom:4px solid #1d2433;color:transparent;cursor:pointer;text-align:center;padding:0 10px}
+.blank.show{color:#cf3f54;font-weight:700}
+.ed[contenteditable=true] .blank{color:#cf3f54;opacity:.6}
+.sprompt{padding:18px 60px 6px;font-size:34px}
+.sctl{display:flex;gap:10px;align-items:center;padding:0 60px 8px;font-size:22px}
+.sctl .st{flex:1;color:#6b6f78}.sctl button{font-size:22px;padding:10px 22px}
+.slive{position:absolute;left:30px;right:30px;top:200px;bottom:16px;overflow:auto}
+#sl .sctl~.slive{top:250px}
+.slive .stage{border:none;padding:6px 10px;min-height:0;zoom:1.45}
+.slive .stage>.sh{display:none}
 @media (max-width:1000px){ .cols{grid-template-columns:1fr} .resg{grid-template-columns:1fr} }
 </style>
 </head>
@@ -98,6 +137,7 @@ body.proj #projBar{display:flex}
     <span class="sp"></span>
     <span id="badge" class="hideP">연결 준비 중…</span>
     <a href="index.html?solo=1" target="_blank" class="hideP"><button class="ghost sm">🤖 혼자 연습 화면</button></a>
+    <button class="sm hideP" style="background:#d9690f" onclick="openSlides()">📽 수업 슬라이드</button>
     <button class="sm acc hideP" onclick="setProj(true)">📺 크게 보기</button>
     <div id="projBar"><button class="sm" id="pOpen" onclick="openRound()">새 판 열기</button><button class="sm acc" id="pRoll" onclick="closeAndRoll()">🎲 굴리기</button><button class="ghost sm" onclick="setProj(false)">✕ 크게 보기 끝</button></div>
   </div>
@@ -138,15 +178,21 @@ body.proj #projBar{display:flex}
         <button data-v="table">🧮 두 주사위 합 표</button>
         <button data-v="rec">📒 기록</button>
       </div>
-      <div class="stage" id="stage"></div>
+      <div id="stageHome"><div class="stage" id="stage"></div></div>
     </div>
   </div>
 </div>
+<div id="sl"><div id="slFrame"></div>
+  <div id="slNav"><button onclick="goSlide(-1)">◀</button><span id="slPage"></span><button onclick="goSlide(1)">▶</button>
+    <span class="sp"></span><span class="muted" style="font-size:13px">← → 키로 넘기기</span>
+    <button id="slEditBtn" onclick="toggleSlEdit()">✏ 글 고치기</button><button onclick="resetSlide()">↺ 이 장 처음대로</button>
+    <button onclick="document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()">⛶ 전체 화면</button>
+    <span class="code2">코드 <b id="slCode"></b></span><button onclick="closeSlides()">✕ 닫기</button></div></div>
 <div class="overlay" id="pauseOv"></div>
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.2;   // index.html 과 같은 값이어야 함
+const APP_VER=20261125.3;   // index.html 과 같은 값이어야 함
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -272,8 +318,9 @@ function renderSide(){
   $('pauseBtn').textContent=S.paused?'▶ 다시 시작':'멈추기'; $('pauseBtn').classList.toggle('acc',S.paused);
   $('pauseMsg').value=S.pauseMsg;
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('sel',b.dataset.v===S.view));
+  if(typeof SL!=='undefined'&&SL.on) renderSlCtl();
 }
-function renderAll(){ renderSide(); renderStage(); }
+function renderAll(){ renderSide(); renderStage(); if(SL&&SL.on){ renderSlCtl(); $('slCode').textContent=S.code; } }
 let animT=null;
 function stopAnim(){ cancelAnimationFrame(animT); animT=null; }
 function renderStage(){
@@ -493,8 +540,82 @@ function exportCSV(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='주사위게임-기록.csv'; a.click();
 }
 
+
+/* ---------- 📽 수업 슬라이드 ----------
+   기본 내용은 slides.js, 이 화면에서 고친 글은 S.slEdit 에 저장 (기존 PPT 모양: 검은 제목 띠 + 주황 제목) */
+let SL={on:false,editing:false,applied:null};
+function slides(){ const E=S.slEdit||{}; return (window.DEFAULT_SLIDES||[]).map(d=>Object.assign({},d,E[d.id]||{})); }
+function openSlides(){
+  SL.on=true; SL.applied=null; if(S.slide==null) S.slide=0;
+  document.body.classList.add('slmode'); $('sl').classList.add('on');
+  try{ document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{}); }catch(e){}
+  renderSlide();
+}
+function closeSlides(){
+  SL.on=false; SL.editing=false; $('sl').classList.remove('on'); document.body.classList.remove('slmode');
+  $('stageHome').appendChild($('stage'));
+  try{ document.fullscreenElement&&document.exitFullscreen(); }catch(e){}
+  renderAll();
+}
+function goSlide(d){ const L=slides(); const i=Math.max(0,Math.min(L.length-1,(S.slide||0)+d)); if(i===S.slide) return; S.slide=i; save(); renderSlide(); }
+function fitSlide(){ const f=$('slFrame'); if(!f) return; const k=Math.min(innerWidth/1600,(innerHeight-44)/900); f.style.transform=`scale(${k})`; f.style.left=((innerWidth-1600*k)/2)+'px'; f.style.top=Math.max(0,(innerHeight-44-900*k)/2)+'px'; }
+addEventListener('resize',()=>{ if(SL.on) fitSlide(); });
+function applySet(sd,i){
+  if(SL.applied===i||!sd.set) return; SL.applied=i;
+  const z=sd.set; let ch=false;
+  if(S.ph!=='bet'){
+    if(z.st&&S.st!==z.st){ S.st=z.st; if(!z.n) S.n=DC.nOpts(z.st)[1]; ch=true; }
+    if(z.n&&S.n!==z.n){ S.n=z.n; ch=true; }
+  }
+  if(z.dn&&S.dn!==z.dn){ S.dn=z.dn; ch=true; }
+  if(ch){ if(S.ph==='roll'){ S.ph='wait'; S.res=null; S.rolls=''; } save(); writeCfg(); }
+}
+const VIEW={chip:'game',sim:'sim',many:'many',duel:'duel',table:'table'};
+function ed(f,html,tag){ return `<${tag||'div'} class="ed" data-f="${f}">${html||''}</${tag||'div'}>`; }
+function renderSlide(){
+  const L=slides(), i=Math.min(S.slide||0,L.length-1), sd=L[i];
+  applySet(sd,i);
+  $('stageHome').appendChild($('stage'));   // 슬라이드를 다시 그리기 전에 게임 화면을 제자리로
+  const hd=`<div class="shd">${ed('title',sd.title,'div')}<div class="stag">${ed('tag',sd.tag||'','span')}</div></div>`;
+  let h='';
+  if(sd.kind==='title') h=`<div class="scover"><div class="dice">${[3,5,1,6,2,4].map(v=>DC.dieSVG(v,120)).join('')}</div><div class="ctext">${ed('kicker',sd.kicker)}${ed('title',sd.title)}${ed('sub',sd.sub)}</div></div>`;
+  else if(sd.kind==='goal') h=hd+`<div class="sgoal"><div class="gl">지난 시간 목표</div>${ed('prev',sd.prev,'div')}<div class="gl">이번 시간 목표</div>${ed('now',sd.now,'div')}</div>`;
+  else if(sd.kind==='join') h=hd+`<div class="sjoin"><div class="jl">${ed('body',sd.body)}</div><div class="jr"><div class="qr" id="slQR"></div><div class="jc">수업 코드 <b>${S.code}</b></div><div class="ju">${esc(studentURL())}</div></div></div>`;
+  else if(sd.kind==='text') h=hd+`<div class="stext">${ed('body',sd.body)}</div>`;
+  else h=hd+`<div class="sprompt">${ed('prompt',sd.prompt)}</div>${sd.live==='chip'?`<div class="sctl" id="slCtl"></div>`:''}<div class="slive" id="slLive"></div>`;
+  $('slFrame').innerHTML=h;
+  $('slPage').textContent=`${i+1} / ${L.length}`;
+  $('slEditBtn').classList.toggle('acc',SL.editing);
+  /* 빈칸: 누르면 답 */
+  $('slFrame').querySelectorAll('.blank').forEach(b=>b.onclick=()=>{ if(!SL.editing) b.classList.toggle('show'); });
+  /* 글 고치기 */
+  $('slFrame').querySelectorAll('.ed').forEach(el=>{ el.contentEditable=SL.editing?'true':'false';
+    el.onblur=()=>{ if(!SL.editing) return; S.slEdit=S.slEdit||{}; const o=S.slEdit[sd.id]||(S.slEdit[sd.id]={}); o[el.dataset.f]=el.innerHTML; save(); }; });
+  if(sd.kind==='join'&&window.QRCode){ try{ new QRCode($('slQR'),{text:studentURL(),width:300,height:300}); }catch(e){} }
+  if(sd.kind==='live'){ S.view=VIEW[sd.live]||'game'; $('slLive').appendChild($('stage')); renderAll(); renderSlCtl(); }
+  else { $('stageHome').appendChild($('stage')); }
+  fitSlide();
+}
+function renderSlCtl(){
+  const c=$('slCtl'); if(!c) return;
+  const bets=Object.keys(betsNow()).length;
+  c.innerHTML=`<span class="st">${DC.stageName(S.st)} · ${S.n}번 · ${S.ph==='wait'?'기다리는 중':S.ph==='bet'?`칩 놓는 중 (제출 ${bets}명)`:'결과'}</span>
+    <button onclick="openRound();renderSlCtl()" ${S.ph==='bet'?'disabled':''}>▶ 판 열기</button>
+    <button class="acc" onclick="closeAndRoll();renderSlCtl()" ${S.ph!=='bet'?'disabled':''}>🎲 굴리기</button>
+    <button class="ghost" onclick="toWait();renderSlCtl()" ${S.ph==='wait'?'disabled':''}>결과 닫기</button>`;
+}
+function toggleSlEdit(){ SL.editing=!SL.editing; renderSlide(); if(SL.editing) toast('글자를 눌러 고치세요. 다른 곳을 누르면 저장돼요',3500); }
+function resetSlide(){ const sd=slides()[S.slide||0]; if(!confirm('이 슬라이드의 글을 처음 내용으로 되돌릴까요?')) return; if(S.slEdit) delete S.slEdit[sd.id]; save(); renderSlide(); }
+addEventListener('keydown',e=>{
+  if(!SL.on) return;
+  const t=e.target; if(SL.editing&&t&&t.isContentEditable) return; if(t&&/INPUT|TEXTAREA|SELECT/.test(t.tagName)) return;
+  if(['ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); goSlide(1); }
+  else if(['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); goSlide(-1); }
+  else if(e.key==='Escape'&&!document.fullscreenElement) closeSlides();
+});
+
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{ S.view=b.dataset.v; save(); renderAll(); });
-addEventListener('keydown',e=>{ if(e.key==='Escape') setProj(false); });
+addEventListener('keydown',e=>{ if(e.key==='Escape'&&!SL.on) setProj(false); });
 addEventListener('beforeunload',e=>{ if(Object.values(LIVE).some(x=>x.online)){ e.preventDefault(); e.returnValue=''; } });
 showCode(); renderAll(); startFB();
 </script>
