@@ -102,7 +102,7 @@ DC.boardHTML = (st,chips,counts,opt) => {
         ${th!=null?`<div class="thy" style="bottom:${pct(th)}"></div>`:''}
       </div>
       <div class="blab">${v}</div>
-      ${opt.edit?`<div class="bbtn"><button class="pl" data-i="${i}" data-d="1" aria-label="${v}에 칩 ${stp}개 더">＋${stp>1?stp:''}</button><button class="mi" data-i="${i}" data-d="-1" aria-label="${v}에서 칩 ${stp}개 빼기">－${stp>1?stp:''}</button></div>`:''}
+      ${opt.edit?`<div class="bbtn"><button class="pl" data-i="${i}" data-d="1" aria-label="${v}에 칩 ${stp}개 더">＋${stp>1?stp:''}</button><button class="mi" data-i="${i}" data-d="-1" aria-label="${v}에서 칩 ${stp}개 빼기">－${stp>1?stp:''}</button>${stp>1?`<div class="fine"><button class="pl1" data-i="${i}" data-d="1" data-one="1" aria-label="${v}에 칩 1개 더">＋1</button><button class="mi1" data-i="${i}" data-d="-1" data-one="1" aria-label="${v}에서 칩 1개 빼기">－1</button></div>`:''}</div>`:''}
     </div>`; }).join('')}</div>`;
 };
 /* 판 공통 스타일 (한 번만 넣음) */
@@ -122,6 +122,8 @@ DC.css = `
 .bbtn{display:flex;flex-direction:column;gap:5px;margin-top:6px}
 .bbtn button{padding:8px 0;font-size:22px;line-height:1;border-radius:10px}
 .bbtn .pl{background:#d9930f}.bbtn .mi{background:#fff;color:#1d2433;border:2px solid #ddd6c8}
+.bbtn .fine{display:flex;gap:3px}.bbtn .fine button{flex:1;padding:9px 0;font-size:16px;border-radius:8px}
+.bbtn .pl1{background:#f3c46b;color:#1d2433}.bbtn .mi1{background:#fff;color:#6b6f78;border:1px solid #ddd6c8}
 .board.s2 .bnum{font-size:14px}.board.s2 .blab{font-size:18px}.board.s2 .bbtn button{font-size:19px;padding:7px 0}
 .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:#6b6f78;margin-top:8px;align-items:center}
 .legend i{display:inline-block;width:16px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}
@@ -137,7 +139,7 @@ let DRAG=null;
 DC.bindBoard = (root,getChips,setChips,n) => {
   const el=root.querySelector('.board'); if(!el) return;
   el.querySelectorAll('.bbtn button').forEach(b=>b.addEventListener('click',()=>{
-    const c=getChips().slice(), i=+b.dataset.i, s=DC.step(n), d=+b.dataset.d*s;
+    const c=getChips().slice(), i=+b.dataset.i, s=b.dataset.one?1:DC.step(n), d=+b.dataset.d*s;   // ＋1/－1 = 세밀 조정
     if(d>0 && DC.sum(c)>=n) return setChips(c,'full');
     c[i]=Math.max(0,Math.min(c[i]+d, n-(DC.sum(c)-c[i]))); setChips(c);
   }));
