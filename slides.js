@@ -21,7 +21,7 @@ window.DEFAULT_SLIDES = [
   { id:'sixty', kind:'live', live:'chip', set:{st:1,n:60}, title:'주사위를 60번 굴리면?', tag:'활동 1<br>생각열기',
     prompt:'칩 <b>60개</b>. 이번에는 어떻게 놓을까요?' },
   { id:'big', kind:'live', live:'chip', set:{st:1,n:600}, ns:[600,6000], title:'600번, 6000번 굴리면?', tag:'활동 1<br>큰 수의 법칙',
-    prompt:'칩 <b>60개</b>로 각 눈이 나올 <b>비율</b>을 예상해요. 점수는 <b>일치도(%)</b>! 많이 굴릴수록 누가 이길까요?' },
+    prompt:'칩 <b>600개</b>는 <b>10개씩</b>, <b>6000개</b>는 <b>50개씩</b> 놓아요. 많이 굴릴수록 누가 이길까요?' },
   { id:'sim', kind:'live', live:'sim', set:{st:1,n:60}, title:'한 판은 운! 100판이면?', tag:'활동 1<br>실험',
     prompt:'여러 전략이 <b>똑같은 굴림</b>으로 100판 겨루면 어떤 전략이 가장 많이 이길까요?' },
   { id:'many', kind:'live', live:'many', set:{st:1}, title:'아주 많이 굴려 보기', tag:'활동 1<br>실험',

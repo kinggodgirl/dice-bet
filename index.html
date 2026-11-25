@@ -123,7 +123,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.6;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.7;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -164,7 +164,7 @@ function render(){
   renderLobby();
   if(v&&$('ridIn')){ $('ridIn').value=v; if(f) $('ridIn').focus(); }
 }
-const CH=()=>DC.chipsFor(CFG.n);   // 놓을 칩 개수 (60번 넘게 굴리면 60개로 비율 예상)
+const CH=()=>DC.chipsFor(CFG.n);   // 놓을 칩 개수 (= 굴리는 횟수, 많으면 DC.step 개씩 놓음)
 function chipsOk(){ return MY.chips && MY.chips.length===DC.outs(CFG.st).length; }
 function renderBet(){
   stopAnim();
@@ -172,7 +172,7 @@ function renderBet(){
   if(MY.r!==CFG.r||!chipsOk()){ MY.r=CFG.r; MY.chips=LS.get('dice-chips-'+st+'-'+C,null); if(!MY.chips||MY.chips.length!==DC.outs(st).length||DC.sum(MY.chips)>C) MY.chips=DC.outs(st).map(()=>0); MY.sentSig=null; MY.sent=null; }
   const what=st===2?'주사위 두 개를 함께 굴려 나온 두 눈의 합':'주사위 한 개를 굴려 나온 눈';
   $('view').innerHTML=`<div class="phase-h">🪙 칩 ${C}개를 놓으세요</div>
-    <div class="phase-d">${pct?`${what}을 <b>${n.toLocaleString()}번</b> 기록해요. 칩 ${C}개로 각 수가 나올 <b>비율</b>을 예상해서 놓으세요.<br>내 칩의 비율과 <b>실제로 나온 비율이 겹친 만큼</b>이 점수(일치도 %)예요. (막대를 누르거나 끌어도 돼요)`:`${what}을 <b>${n}번</b> 기록해요. 각 수가 <b>몇 번 나올지</b> 예상해서 칩을 놓으세요.<br>나중에 <b>실제로 나온 횟수와 겹친 칩</b>만큼 점수가 돼요. (막대를 누르거나 끌어도 돼요)`}</div>
+    <div class="phase-d">${pct?`${what}을 <b>${n.toLocaleString()}번</b> 기록해요. 칩 ${C}개로 각 수가 나올 <b>비율</b>을 예상해서 놓으세요.<br>내 칩의 비율과 <b>실제로 나온 비율이 겹친 만큼</b>이 점수(일치도 %)예요. (막대를 누르거나 끌어도 돼요)`:`${what}을 <b>${n.toLocaleString()}번</b> 기록해요. 각 수가 <b>몇 번 나올지</b> 예상해서 칩을 놓으세요.${DC.step(n)>1?` <b>＋ 한 번에 칩 ${DC.step(n)}개</b>씩 놓여요.`:''}<br>나중에 <b>실제로 나온 횟수와 겹친 칩</b>만큼 점수가 돼요. (막대를 누르거나 끌어도 돼요)`}</div>
     <div id="bwrap" style="--bh:${st===2?240:270}px"></div>
     <div class="left"><span class="big" id="leftTxt"></span><span class="sp"></span>
       <button class="ghost" onclick="clearChips()">모두 빼기</button>
@@ -182,7 +182,7 @@ function renderBet(){
 }
 function drawBoard(){
   const w=$('bwrap'); if(!w) return;
-  w.innerHTML=DC.boardHTML(CFG.st,MY.chips,null,{edit:true,max:DC.editMax(CH(),MY.chips)});
+  w.innerHTML=DC.boardHTML(CFG.st,MY.chips,null,{edit:true,max:DC.editMax(CH(),MY.chips),step:DC.step(CH())});
   DC.bindBoard(w,()=>MY.chips,setChips,CH());
 }
 function setChips(c,flag){

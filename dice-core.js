@@ -8,8 +8,10 @@ DC.prob = (st,v) => st===2 ? (6-Math.abs(v-7))/36 : 1/6;
 /* 판마다 굴리는 횟수 선택지 (칩 개수 = 굴리는 횟수) */
 DC.nOpts = st => st===2 ? [1,6,36,72] : [1,6,30,60];
 /* 굴리는 횟수가 60번보다 많으면 칩은 60개로 '비율'을 예상 (점수 = 일치도 %) */
-DC.chipsFor = n => n<=60 ? n : 60;
-DC.isPct = n => n>60;
+/* 칩 개수 = 굴리는 횟수. 많이 굴릴 때는 한 번에 여러 개씩 놓음 (600번: 10개씩, 6000번: 50개씩) */
+DC.chipsFor = n => n;
+DC.isPct = n => false;
+DC.step = n => { const want = n>600 ? 50 : n>60 ? 10 : 1; for(const s of [50,25,10,5,2,1]) if(s<=want && n%s===0) return s; return 1; };
 DC.pscore = (chips,counts,n) => { const C=DC.chipsFor(n); if(C===n) return DC.score(chips,counts);
   const N=DC.sum(counts)||1; return Math.round(chips.reduce((s,c,i)=>s+Math.min((c||0)/C,(counts[i]||0)/N),0)*1000)/10; };
 DC.unit = n => DC.isPct(n)?'%':'점';
@@ -86,20 +88,21 @@ DC.allDiceHTML = (st,list) => `${list.length>120?`<div style="color:#6b6f78;font
 DC.boardHTML = (st,chips,counts,opt) => {
   opt=opt||{}; const o=DC.outs(st);
   const mx=Math.max(opt.max||1, ...(chips||[0]), ...(counts||[0]), opt.theory?Math.ceil(opt.theory*Math.max(...o.map(v=>DC.prob(st,v)))):0);
+  const stp=opt.step||DC.step(DC.sum(chips||[0])||1);
   const pct=x=>(x/mx*100).toFixed(2)+'%';
-  return `<div class="board ${opt.edit?'edit':''} s${st}" data-max="${mx}">${o.map((v,i)=>{
+  return `<div class="board ${opt.edit?'edit':''} s${st}" data-max="${mx}" data-step="${stp}">${o.map((v,i)=>{
     const c=chips?chips[i]||0:0, k=counts?counts[i]||0:0, ov=Math.min(c,k);
     const th=opt.theory?opt.theory*DC.prob(st,v):null;
     return `<div class="bcol" data-i="${i}">
       <div class="bnum">${counts?`<span class="k">${k}</span>`:''}${chips&&counts?'<span class="sl">/</span>':''}${chips?`<span class="c">${c}</span>`:''}</div>
       <div class="barea" data-i="${i}">
         ${counts?`<div class="act" style="height:${pct(k)}"></div>`:''}
-        ${chips?`<div class="chp ${c?'':'zero'}" style="height:${pct(c)};background-size:100% ${(100/Math.max(c,1)).toFixed(3)}%"></div>`:''}
+        ${chips?`<div class="chp ${c?'':'zero'}" style="height:${pct(c)};background-size:100% ${(100/Math.max(c/stp,1)).toFixed(3)}%"></div>`:''}
         ${chips&&counts&&ov?`<div class="ovl" style="height:${pct(ov)}"></div>`:''}
         ${th!=null?`<div class="thy" style="bottom:${pct(th)}"></div>`:''}
       </div>
       <div class="blab">${v}</div>
-      ${opt.edit?`<div class="bbtn"><button class="pl" data-i="${i}" data-d="1" aria-label="${v}에 칩 하나 더">＋</button><button class="mi" data-i="${i}" data-d="-1" aria-label="${v}에서 칩 하나 빼기">－</button></div>`:''}
+      ${opt.edit?`<div class="bbtn"><button class="pl" data-i="${i}" data-d="1" aria-label="${v}에 칩 ${stp}개 더">＋${stp>1?stp:''}</button><button class="mi" data-i="${i}" data-d="-1" aria-label="${v}에서 칩 ${stp}개 빼기">－${stp>1?stp:''}</button></div>`:''}
     </div>`; }).join('')}</div>`;
 };
 /* 판 공통 스타일 (한 번만 넣음) */
@@ -134,9 +137,9 @@ let DRAG=null;
 DC.bindBoard = (root,getChips,setChips,n) => {
   const el=root.querySelector('.board'); if(!el) return;
   el.querySelectorAll('.bbtn button').forEach(b=>b.addEventListener('click',()=>{
-    const c=getChips().slice(), i=+b.dataset.i, d=+b.dataset.d;
+    const c=getChips().slice(), i=+b.dataset.i, s=DC.step(n), d=+b.dataset.d*s;
     if(d>0 && DC.sum(c)>=n) return setChips(c,'full');
-    c[i]=Math.max(0,c[i]+d); setChips(c);
+    c[i]=Math.max(0,Math.min(c[i]+d, n-(DC.sum(c)-c[i]))); setChips(c);
   }));
   el.querySelectorAll('.barea').forEach(a=>{
     a.addEventListener('pointerdown',e=>{ DRAG={root,getChips,setChips,n}; setAt(a,e.clientY); e.preventDefault(); });
@@ -146,10 +149,10 @@ function setAt(area,y){
   if(!DRAG) return;
   const brd=area.closest('.board'), mx=+brd.dataset.max||DRAG.n;
   const r=area.getBoundingClientRect(), i=+area.dataset.i;
-  let want=Math.round((r.bottom-y)/r.height*mx); want=Math.max(0,Math.min(mx,want));
+  const s=DC.step(DRAG.n); let want=Math.round((r.bottom-y)/r.height*mx/s)*s; want=Math.max(0,Math.min(mx,want));
   const c=DRAG.getChips().slice(); if(c[i]===want) return;
   const room=DRAG.n-(DC.sum(c)-c[i]);
-  const full=want>room; c[i]=Math.min(want,room); DRAG.setChips(c,full?'full':'');
+  const full=want>room; c[i]=Math.min(want,Math.floor(room/s)*s); DRAG.setChips(c,full?'full':'');
 }
 addEventListener('pointermove',e=>{ if(!DRAG) return; const t=document.elementFromPoint(e.clientX,e.clientY); const a=t&&t.closest&&t.closest('.barea'); if(a&&DRAG.root.contains(a)) setAt(a,e.clientY); },{passive:true});
 addEventListener('pointerup',()=>{ DRAG=null; }); addEventListener('pointercancel',()=>{ DRAG=null; });
@@ -158,9 +161,9 @@ DC.editMax = (n,chips) => Math.max(Math.ceil(n/2), ...chips);
 /* 칩만 바뀌었을 때 판을 다시 만들지 않고 고침 (끌기가 끊기지 않게). 눈금을 바꿔야 하면 false */
 DC.patchBoard = (root,chips) => {
   const el=root.querySelector('.board'); if(!el) return false;
-  const mx=+el.dataset.max; if(Math.max(...chips)>mx) return false;
+  const mx=+el.dataset.max, stp=+el.dataset.step||1; if(Math.max(...chips)>mx) return false;
   el.querySelectorAll('.bcol').forEach(col=>{ const i=+col.dataset.i, c=chips[i]||0, p=col.querySelector('.chp'), t=col.querySelector('.bnum .c');
-    if(p){ p.style.height=(c/mx*100).toFixed(2)+'%'; p.style.backgroundSize='100% '+(100/Math.max(c,1)).toFixed(3)+'%'; p.classList.toggle('zero',!c); }
+    if(p){ p.style.height=(c/mx*100).toFixed(2)+'%'; p.style.backgroundSize='100% '+(100/Math.max(c/stp,1)).toFixed(3)+'%'; p.classList.toggle('zero',!c); }
     if(t) t.textContent=c; });
   return true;
 };
