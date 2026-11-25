@@ -146,7 +146,7 @@ body.proj #projBar{display:flex}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.1;   // index.html 과 같은 값이어야 함
+const APP_VER=20261125.2;   // index.html 과 같은 값이어야 함
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -247,7 +247,7 @@ function closeAndRoll(){
 function toWait(){ S.ph='wait'; S.res=null; S.rolls=''; save(); writeCfg(); renderAll(); }
 function setStage(st){ if(S.ph==='bet'){ toast('반 전체 판이 열려 있는 동안에는 바꿀 수 없어요'); return; } S.st=st; S.n=DC.nOpts(st)[0]; S.dn=null; save(); writeCfg(); renderAll(); }
 function setDN(n){ S.dn=n; save(); writeCfg(); renderAll(); }
-function setN(n){ if(S.ph==='bet'){ toast('판이 열려 있는 동안에는 바꿀 수 없어요'); renderSide(); return; } n=Math.floor(+n||0); if(n<6||n>200){ toast('6~200번 사이로 정해 주세요'); renderSide(); return; } S.n=n; save(); if(S.ph==='wait') writeCfg(); renderAll(); }
+function setN(n){ if(S.ph==='bet'){ toast('판이 열려 있는 동안에는 바꿀 수 없어요'); renderSide(); return; } n=Math.floor(+n||0); if(n<1||n>200){ toast('1~200번 사이로 정해 주세요'); renderSide(); return; } S.n=n; save(); if(S.ph==='wait') writeCfg(); renderAll(); }
 function togglePause(){ S.paused=!S.paused; S.pauseMsg=$('pauseMsg').value.trim()||DEF.pauseMsg; save(); writeCfg(); renderSide(); }
 function resetAll(){ if(!confirm('모든 학생의 대결 전적, 누적 점수, 판 기록을 지우고 열린 방도 모두 닫을까요? (되돌릴 수 없어요)')) return; S.tot={}; S.rounds=[]; S.games={}; S.duel={}; S.bal={}; base&&base.child('rooms').remove().catch(()=>{}); S.res=null; S.ph='wait'; S.rolls=''; S.resetAt=Date.now(); save(); writeCfg(); renderAll(); toast('점수를 초기화했어요'); }
 function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 학생들은 새 코드로 다시 들어와야 해요. (점수 기록은 남아요)')) return; S.code=newCode(); S.ph='wait'; S.res=null; save(); showCode(); openClass(); renderAll(); }
@@ -257,7 +257,7 @@ function setProj(on){ document.body.classList.toggle('proj',on); renderAll(); }
 function renderSide(){
   $('stSeg').innerHTML=[1,2].map(s=>`<button class="${S.st===s?'sel':''}" onclick="setStage(${s})">${s===1?'1단계 한 개':'2단계 두 개의 합'}</button>`).join('');
   $('dnSeg').innerHTML=DC.duelN(S.st).slice().sort((a,b)=>a-b).map(n=>`<button class="${duelN()===n?'sel':''}" onclick="setDN(${n})">${n}번</button>`).join('');
-  if(!(document.activeElement&&$('nSeg').contains(document.activeElement))) $('nSeg').innerHTML=DC.nOpts(S.st).map(n=>`<button class="${S.n===n?'sel':''}" onclick="setN(${n})">${n}번</button>`).join('')+`<label class="nIn">직접 <input type="number" min="6" max="200" value="${S.n}" onchange="setN(+this.value)">번</label>`;
+  if(!(document.activeElement&&$('nSeg').contains(document.activeElement))) $('nSeg').innerHTML=DC.nOpts(S.st).map(n=>`<button class="${S.n===n?'sel':''}" onclick="setN(${n})">${n}번</button>`).join('')+`<label class="nIn">직접 <input type="number" min="1" max="200" value="${S.n}" onchange="setN(+this.value)">번</label>`;
   const bets=betsNow(), ks=Object.keys(LIVE).sort((a,b)=>LIVE[a].name.localeCompare(LIVE[b].name,'ko',{numeric:true}));
   const on=ks.filter(k=>LIVE[k].online).length;
   $('stuCnt').textContent=`접속 ${on}명${S.ph==='bet'?` · 제출 ${Object.keys(bets).length}명`:''}`;
