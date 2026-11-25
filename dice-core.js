@@ -6,7 +6,7 @@ DC.outs = st => st===2 ? [2,3,4,5,6,7,8,9,10,11,12] : [1,2,3,4,5,6];
 /* 이론 확률 (교사 화면의 '이론값' 표시에만 씀) */
 DC.prob = (st,v) => st===2 ? (6-Math.abs(v-7))/36 : 1/6;
 /* 판마다 굴리는 횟수 선택지 (칩 개수 = 굴리는 횟수) */
-DC.nOpts = st => st===2 ? [36,72] : [30,60];
+DC.nOpts = st => st===2 ? [18,36,72] : [12,30,60];
 DC.stageName = st => st===2 ? '2단계 · 주사위 두 개의 합' : '1단계 · 주사위 한 개';
 
 function rnd6(){
@@ -40,7 +40,7 @@ DC.presets = (st,n) => {
     const order=raw.map((x,i)=>[x-Math.floor(x),i]).sort((a,b)=>b[0]-a[0]); for(let k=0;left>0;k++,left--) c[order[k%L][1]]++; return c; };
   const one = i => o.map((_,j)=>j===i?n:0);
   if(st===2) return [
-    {id:'even', name:'모두 고르게', c:[4,3,3,3,3,4,3,3,3,3,4].map(x=>x*n/36)},
+    {id:'even', name:'모두 고르게', c:n%36===0?[4,3,3,3,3,4,3,3,3,3,4].map(x=>x*n/36):spread(o.map((v,i)=>1+(i%5===0?0.01:0)))},
     {id:'mid', name:'7 근처에 많이', c:spread(o.map(v=>6-Math.abs(v-7)))},
     {id:'only7', name:'7에 몽땅', c:one(5)},
     {id:'ends', name:'양 끝(2·12)에 많이', c:spread(o.map(v=>1+Math.abs(v-7)))},
@@ -48,7 +48,7 @@ DC.presets = (st,n) => {
   return [
     {id:'even', name:'모두 고르게', c:spread(o.map(()=>1))},
     {id:'only6', name:'6에 몽땅', c:one(5)},
-    {id:'half', name:'5·6에 반반', c:o.map(v=>v>=5?n/2:0)},
+    {id:'half', name:'5·6에 반반', c:o.map(v=>v===5?Math.floor(n/2):v===6?Math.ceil(n/2):0)},
     {id:'tilt', name:'큰 눈에 조금 더', c:spread([1,1,1,2,2,2])},
   ];
 };
@@ -67,6 +67,8 @@ DC.simulate = (st,n,strats,games) => {
 const PIPS={1:[[50,50]],2:[[27,27],[73,73]],3:[[27,27],[50,50],[73,73]],4:[[27,27],[73,27],[27,73],[73,73]],5:[[27,27],[73,27],[50,50],[27,73],[73,73]],6:[[27,25],[73,25],[27,50],[73,50],[27,75],[73,75]]};
 DC.dieSVG = (v,size,cls) => `<svg class="die ${cls||''}" width="${size}" height="${size}" viewBox="0 0 100 100" aria-label="주사위 ${v}"><rect x="4" y="4" width="92" height="92" rx="18" fill="#fff" stroke="#1d2433" stroke-width="6"/>${(PIPS[v]||[]).map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9.5" fill="${v===1?'#cf3f54':'#1d2433'}"/>`).join('')}</svg>`;
 
+/* 굴린 주사위 전체 (순서대로) */
+DC.allDiceHTML = (st,list) => `<div class="alld s${st}">${list.map((x,i)=>`<span class="ad" title="${i+1}번째">${st===2?DC.dieSVG(x.a,26)+DC.dieSVG(x.b,26)+`<i>${x.v}</i>`:DC.dieSVG(x.a,30)}</span>`).join('')}</div>`;
 /* 막대 판: chips(내 칩, 없으면 null), counts(실제, 없으면 null), opt.max(눈금 최대), opt.theory(N: 이론값 점선), opt.edit(칩 놓기 가능) */
 DC.boardHTML = (st,chips,counts,opt) => {
   opt=opt||{}; const o=DC.outs(st);
@@ -109,6 +111,10 @@ DC.css = `
 .legend i{display:inline-block;width:16px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}
 .legend .lc{border:3px solid #d9930f;background:rgba(255,214,120,.6)}.legend .la{background:#9fb9de}.legend .lo{background:rgba(46,139,87,.75)}.legend .lt{border-top:3px dashed #cf3f54;height:0;width:18px;border-radius:0}
 .die{display:inline-block;vertical-align:middle}
+.alld{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.alld .ad{display:inline-flex;align-items:center;gap:2px}
+.alld.s2 .ad{background:#f4f1ea;border-radius:8px;padding:2px 6px 2px 3px}
+.alld i{font-style:normal;font-weight:900;font-family:"Times New Roman",serif;font-size:19px;margin-left:3px;min-width:20px}
 `;
 /* 칩 놓기: 막대를 누르거나 끌어서 높이 정하기, ＋/－ 버튼. setChips 가 화면을 다시 그려도 끌기가 이어지게 상태는 바깥에 둠 */
 let DRAG=null;

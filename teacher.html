@@ -71,6 +71,7 @@ table.rk .minib .bnum,table.rk .minib .blab{display:none}
 .sumtab td{cursor:pointer;font-weight:700}
 .sumtab td.hl{background:#ffe3a3}
 .balg{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px}.balg>div{display:flex;align-items:center;gap:6px;border-bottom:1px solid #f0ece3;padding:3px 0}.balg .nm{flex:1;font-weight:700}.balg b{font-size:18px;min-width:44px;text-align:right}.x2{background:#fff;color:var(--ink);border:1px solid var(--line);padding:2px 7px;font-size:13px;font-weight:400}
+.nIn{display:flex;align-items:center;gap:4px;font-size:14px;width:100%;margin-top:4px}.nIn input{width:80px;padding:6px 8px}
 .glist{display:grid;grid-template-columns:1fr;gap:10px}.gm .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
 .pct{display:flex;gap:6px;margin-top:2px}.pct div{flex:1;text-align:center;font-size:14px;color:var(--muted);font-weight:700}
 table.mx{border-collapse:collapse;width:100%;background:#fff;font-size:15px}
@@ -145,7 +146,7 @@ body.proj #projBar{display:flex}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.3;   // index.html 과 같은 값이어야 함
+const APP_VER=20261125.1;   // index.html 과 같은 값이어야 함
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -246,7 +247,7 @@ function closeAndRoll(){
 function toWait(){ S.ph='wait'; S.res=null; S.rolls=''; save(); writeCfg(); renderAll(); }
 function setStage(st){ if(S.ph==='bet'){ toast('반 전체 판이 열려 있는 동안에는 바꿀 수 없어요'); return; } S.st=st; S.n=DC.nOpts(st)[0]; S.dn=null; save(); writeCfg(); renderAll(); }
 function setDN(n){ S.dn=n; save(); writeCfg(); renderAll(); }
-function setN(n){ if(S.ph==='bet'){ toast('판이 열려 있는 동안에는 바꿀 수 없어요'); return; } S.n=n; save(); if(S.ph==='wait') writeCfg(); renderAll(); }
+function setN(n){ if(S.ph==='bet'){ toast('판이 열려 있는 동안에는 바꿀 수 없어요'); renderSide(); return; } n=Math.floor(+n||0); if(n<6||n>200){ toast('6~200번 사이로 정해 주세요'); renderSide(); return; } S.n=n; save(); if(S.ph==='wait') writeCfg(); renderAll(); }
 function togglePause(){ S.paused=!S.paused; S.pauseMsg=$('pauseMsg').value.trim()||DEF.pauseMsg; save(); writeCfg(); renderSide(); }
 function resetAll(){ if(!confirm('모든 학생의 대결 전적, 누적 점수, 판 기록을 지우고 열린 방도 모두 닫을까요? (되돌릴 수 없어요)')) return; S.tot={}; S.rounds=[]; S.games={}; S.duel={}; S.bal={}; base&&base.child('rooms').remove().catch(()=>{}); S.res=null; S.ph='wait'; S.rolls=''; S.resetAt=Date.now(); save(); writeCfg(); renderAll(); toast('점수를 초기화했어요'); }
 function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 학생들은 새 코드로 다시 들어와야 해요. (점수 기록은 남아요)')) return; S.code=newCode(); S.ph='wait'; S.res=null; save(); showCode(); openClass(); renderAll(); }
@@ -256,7 +257,7 @@ function setProj(on){ document.body.classList.toggle('proj',on); renderAll(); }
 function renderSide(){
   $('stSeg').innerHTML=[1,2].map(s=>`<button class="${S.st===s?'sel':''}" onclick="setStage(${s})">${s===1?'1단계 한 개':'2단계 두 개의 합'}</button>`).join('');
   $('dnSeg').innerHTML=DC.duelN(S.st).slice().sort((a,b)=>a-b).map(n=>`<button class="${duelN()===n?'sel':''}" onclick="setDN(${n})">${n}번</button>`).join('');
-  $('nSeg').innerHTML=DC.nOpts(S.st).map(n=>`<button class="${S.n===n?'sel':''}" onclick="setN(${n})">${n}번</button>`).join('');
+  if(!(document.activeElement&&$('nSeg').contains(document.activeElement))) $('nSeg').innerHTML=DC.nOpts(S.st).map(n=>`<button class="${S.n===n?'sel':''}" onclick="setN(${n})">${n}번</button>`).join('')+`<label class="nIn">직접 <input type="number" min="6" max="200" value="${S.n}" onchange="setN(+this.value)">번</label>`;
   const bets=betsNow(), ks=Object.keys(LIVE).sort((a,b)=>LIVE[a].name.localeCompare(LIVE[b].name,'ko',{numeric:true}));
   const on=ks.filter(k=>LIVE[k].online).length;
   $('stuCnt').textContent=`접속 ${on}명${S.ph==='bet'?` · 제출 ${Object.keys(bets).length}명`:''}`;
@@ -326,6 +327,7 @@ function showResult(cnt){
   const order=names.sort((a,b)=>SC[b]-SC[a]);
   /* 반 평균 칩 */
   const avg=DC.outs(st).map((_,i)=>names.length?names.reduce((s,nm)=>s+bets[nm][i],0)/names.length:0);
+  const allD=`<div class="box2" style="margin-top:14px"><h4>🎲 굴린 주사위 전체 (${n}번, 굴린 순서대로)</h4>${DC.allDiceHTML(st,DC.decode(st,S.rolls))}</div>`;
   $('after').innerHTML=`<div class="opts">
       <label><input type="checkbox" ${S.theory?'checked':''} onchange="S.theory=this.checked;save();renderStage()"> 이론값 점선 보기 <span class="muted">(${n}번 굴리면 평균적으로 나오는 횟수)</span></label>
       <label><input type="checkbox" ${S.hideNames?'checked':''} onchange="S.hideNames=this.checked;save();renderStage()"> 이름 가리기</label></div>
@@ -337,6 +339,7 @@ function showResult(cnt){
       <div><div class="box2"><h4>👥 우리 반이 놓은 칩 (평균)</h4>${DC.boardHTML(st,avg.map(x=>+x.toFixed(1)),null,{max:mb})}</div>
         <div class="box2" style="margin-top:12px"><h4>🤔 생각해 볼 질문</h4><div style="font-size:17px;line-height:1.8">${st===2?'· 어떤 합이 많이 나왔나요? 왜 그럴까요?<br>· 합이 2가 되는 경우와 7이 되는 경우는 각각 몇 가지일까요?':'· 1등은 칩을 어떻게 놓았나요?<br>· 한 곳에 몰아 놓은 친구는 왜 점수가 낮을까요?<br>· 다시 굴려도 1등 전략이 또 이길까요?'}</div></div></div>
     </div>`:'<div class="muted" style="margin-top:14px">이번 판에 칩을 제출한 학생이 없어요.</div>'}
+    ${allD}
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap"><button class="acc" onclick="openRound()">▶ 다음 판 열기</button><button class="ghost" onclick="S.view='sim';renderAll()">🔬 이 전략들로 100판 겨뤄 보기</button></div>`;
 }
 

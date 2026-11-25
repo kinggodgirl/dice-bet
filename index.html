@@ -117,7 +117,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261124.3;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.1;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -242,6 +242,7 @@ function finish(mine,cnt,myS){
     h+=`<div class="mini"><div class="card"><h4>🥇 이번 판 1등의 칩 (${res.best}점)</h4>${DC.boardHTML(st,res.top[0],null,{max:Math.ceil(CFG.n/3)})}</div>
       ${mine?`<div class="card"><h4>🙋 내 칩 (${myS}점)</h4>${DC.boardHTML(st,mine,null,{max:Math.ceil(CFG.n/3)})}</div>`:''}</div>`;
   }
+  h+=`<div class="card" style="margin-top:12px"><h4>🎲 굴린 주사위 전체 (${CFG.n}번)</h4>${DC.allDiceHTML(st,DC.decode(st,CFG.rolls))}</div>`;
   h+=`<div class="think">🤔 ${st===2?'어떤 합이 많이 나왔나요? 그 합이 왜 많이 나올까요? 두 주사위의 눈을 짝지어 생각해 보세요.':'점수를 많이 받으려면 칩을 어떻게 놓는 게 좋을까요? 1등의 칩 모양과 내 칩 모양을 비교해 보세요.'}</div>`;
   if(SOLO) h+=`<div style="text-align:center;margin-top:14px"><button class="acc" style="font-size:19px;padding:14px 26px" onclick="soloAgain()">다시 하기</button> <button class="ghost" onclick="CFG={ph:'wait'};render()">처음으로</button></div>`;
   $('after').innerHTML=h;
