@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>교사용 · 주사위 동그라미 대결</title>
+<title>교사용 · 주사위 칩 대결</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
@@ -119,6 +119,12 @@ body.proj #projBar{display:flex}
 .blank.show{color:#cf3f54;font-weight:700}
 .ed[contenteditable=true] .blank{color:#cf3f54;opacity:.6}
 .sprompt{padding:18px 60px 6px;font-size:34px}
+#slNav button.on2{background:#2e8b57}
+.sask{padding:24px 60px}.sask .aq{font-size:40px;line-height:1.5}.sask .ah{font-size:26px;color:#6b6f78;margin-top:6px}
+.sask .sctl{padding:14px 0}
+.ans{position:absolute;left:60px;right:60px;top:400px;bottom:20px;overflow:auto;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start}
+.ans .a{background:#fff6e8;border:3px solid #f0b46a;border-radius:18px;padding:12px 18px;max-width:460px;font-size:26px;line-height:1.4}
+.ans .a .n{font-size:18px;color:#6b6f78;margin-top:4px}
 .sctl{display:flex;gap:10px;align-items:center;padding:0 60px 8px;font-size:22px}
 .sctl .st{flex:1;color:#6b6f78}.sctl button{font-size:22px;padding:10px 22px}
 .slive{position:absolute;left:30px;right:30px;top:200px;bottom:16px;overflow:auto}
@@ -185,6 +191,7 @@ body.proj #projBar{display:flex}
 <div id="sl"><div id="slFrame"></div>
   <div id="slNav"><button onclick="goSlide(-1)">◀</button><span id="slPage"></span><button onclick="goSlide(1)">▶</button>
     <span class="sp"></span><span class="muted" style="font-size:13px">← → 키로 넘기기</span>
+    <button id="slPauseOn" onclick="setPause(true)">✋ 멈추기</button><button id="slPauseOff" onclick="setPause(false)">▶ 활성화</button>
     <button id="slEditBtn" onclick="toggleSlEdit()">✏ 글 고치기</button><button onclick="resetSlide()">↺ 이 장 처음대로</button>
     <button onclick="document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()">⛶ 전체 화면</button>
     <span class="code2">코드 <b id="slCode"></b></span><button onclick="closeSlides()">✕ 닫기</button></div></div>
@@ -192,7 +199,7 @@ body.proj #projBar{display:flex}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.3;   // index.html 과 같은 값이어야 함
+const APP_VER=20261125.4;   // index.html 과 같은 값이어야 함
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -201,7 +208,7 @@ document.head.insertAdjacentHTML('beforeend','<style>'+DC.css+'</style>');
 function newCode(){ return String(1000+Math.floor(Math.random()*9000)); }
 
 /* ---------- 장부 (이 화면이 원본) ---------- */
-const DEF={code:null, st:1, n:30, ph:'wait', r:0, rolls:'', at:0, res:null, tot:{}, rounds:[], paused:false, pauseMsg:'선생님을 봐 주세요', resetAt:0, view:'duel', dn:null, games:{}, duel:{}, pt:{on:true,start:100,max:30,streak:3}, bal:{}, theory:false, hideNames:false};
+const DEF={code:null, st:1, n:30, ph:'wait', r:0, rolls:'', at:0, res:null, tot:{}, rounds:[], paused:false, pauseMsg:'선생님을 봐 주세요', resetAt:0, view:'duel', dn:null, games:{}, duel:{}, pt:{on:true,start:100,max:30,streak:3}, bal:{}, ask:{id:0,q:'',open:false}, theory:false, hideNames:false};
 let S=Object.assign({},DEF,LS.get('dice-t',{}));
 S.pt=Object.assign({},DEF.pt,S.pt||{}); S.bal=S.bal||{}; S.games=S.games||{}; S.duel=S.duel||{};
 if(!S.code) S.code=newCode();
@@ -216,7 +223,7 @@ save();
 const FB_OK=!!(window.firebase && window.FB_CONFIG && FB_CONFIG.apiKey && FB_CONFIG.databaseURL);
 let db=null, base=null; if(FB_OK){ try{ firebase.initializeApp(FB_CONFIG); db=firebase.database(); }catch(e){ console.error(e); } }
 function cfgObj(){ return {ver:APP_VER, st:S.st, n:S.n, ph:S.ph, r:S.r, rolls:S.rolls||'', at:S.at||0, res:S.res||null,
-  tot:Object.fromEntries(Object.entries(S.tot).map(([k,v])=>[k,{s:v.s,w:v.w,g:v.g}])), dst:S.st, dn:duelN(), rec:Object.fromEntries(Object.entries(S.duel).map(([k,v])=>[k,{w:v.w,l:v.l,d:v.d}])), pt:S.pt, bal:S.bal, pair:pairAll(), paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, t:firebase.database.ServerValue.TIMESTAMP}; }
+  tot:Object.fromEntries(Object.entries(S.tot).map(([k,v])=>[k,{s:v.s,w:v.w,g:v.g}])), dst:S.st, dn:duelN(), rec:Object.fromEntries(Object.entries(S.duel).map(([k,v])=>[k,{w:v.w,l:v.l,d:v.d}])), pt:S.pt, bal:S.bal, pair:pairAll(), ask:S.ask&&S.ask.open?{id:S.ask.id,q:S.ask.q}:null, paused:S.paused, pauseMsg:S.pauseMsg, resetAt:S.resetAt||0, t:firebase.database.ServerValue.TIMESTAMP}; }
 function writeCfg(){ if(!base) return Promise.resolve(); return base.child('cfg').set(cfgObj()).catch(e=>{ $('peerErr').textContent='저장 실패: '+e.message; }); }
 function studentURL(){ return location.href.replace(/[?#].*$/,'').replace(/teacher\.html$/,'')+'?c='+S.code; }
 function showCode(){ $('code').textContent=S.code; $('url').textContent=studentURL(); }
@@ -262,7 +269,7 @@ function startFB(){
 function ingest(all){
   const live={};
   for(const k in all){ const v=all[k]||{}, p=v.p||{};
-    live[k]={name:String(p.name||fbName(k)).slice(0,10), online:p.online===true, ver:+p.ver||0, bet:v.bet||null}; }
+    live[k]={name:String(p.name||fbName(k)).slice(0,10), online:p.online===true, ver:+p.ver||0, bet:v.bet||null, ans:p.ans&&typeof p.ans.t==='string'?{id:p.ans.id,t:p.ans.t.slice(0,200)}:null}; }
   LIVE=live;
 }
 function kick(k){
@@ -272,7 +279,7 @@ function kick(k){
 }
 
 /* ---------- 판 진행 ---------- */
-function betsNow(){ const b={}; for(const k in LIVE){ const x=LIVE[k].bet; if(x&&x.r===S.r&&DC.validChips(S.st,S.n,x.c)) b[k]=x.c; } return b; }
+function betsNow(){ const b={}; for(const k in LIVE){ const x=LIVE[k].bet; if(x&&x.r===S.r&&DC.validChips(S.st,DC.chipsFor(S.n),x.c)) b[k]=x.c; } return b; }
 function openRound(){
   if(S.ph==='bet'){ toast('이미 판이 열려 있어요'); return; }
   S.ph='bet'; S.r=Date.now(); S.rolls=''; S.at=0; S.res=null; save(); writeCfg(); S.view='game'; renderAll();
@@ -282,10 +289,10 @@ function closeAndRoll(){
   const bets=betsNow(), ks=Object.keys(bets);
   if(!ks.length&&!confirm('아직 칩을 제출한 학생이 없어요. 그래도 굴릴까요?')) return;
   const rolls=DC.roll(S.st,S.n), cnt=DC.counts(S.st,DC.decode(S.st,rolls));
-  const sc={}; ks.forEach(k=>sc[k]=DC.score(bets[k],cnt));
+  const sc={}; ks.forEach(k=>sc[k]=DC.pscore(bets[k],cnt,S.n)); const pct=DC.isPct(S.n);
   const rk=DC.ranks(sc), best=ks.length?Math.max(...Object.values(sc)):0;
   const top=ks.filter(k=>sc[k]===best).slice(0,3).map(k=>bets[k]);
-  ks.forEach(k=>{ const t=S.tot[k]||(S.tot[k]={name:LIVE[k].name,s:0,w:0,g:0}); t.name=LIVE[k].name; t.s+=sc[k]; t.g++; if(rk[k]===1) t.w++; });
+  ks.forEach(k=>{ const t=S.tot[k]||(S.tot[k]={name:LIVE[k].name,s:0,w:0,g:0}); t.name=LIVE[k].name; if(!pct){ t.s+=sc[k]; t.g++; } if(rk[k]===1) t.w++; });   // 비율(%) 판은 누적 점수에 넣지 않음
   S.rounds.push({r:S.r, st:S.st, n:S.n, rolls, sc:Object.fromEntries(ks.map(k=>[LIVE[k].name,sc[k]])), bets:Object.fromEntries(ks.map(k=>[LIVE[k].name,bets[k]]))});
   S.ph='roll'; S.rolls=rolls; S.at=now()+1200; S.res={sc,rk,cnt:ks.length,best,top};
   save(); writeCfg(); S.view='game'; renderAll();
@@ -293,7 +300,7 @@ function closeAndRoll(){
 function toWait(){ S.ph='wait'; S.res=null; S.rolls=''; save(); writeCfg(); renderAll(); }
 function setStage(st){ if(S.ph==='bet'){ toast('반 전체 판이 열려 있는 동안에는 바꿀 수 없어요'); return; } S.st=st; S.n=DC.nOpts(st)[0]; S.dn=null; save(); writeCfg(); renderAll(); }
 function setDN(n){ S.dn=n; save(); writeCfg(); renderAll(); }
-function setN(n){ if(S.ph==='bet'){ toast('판이 열려 있는 동안에는 바꿀 수 없어요'); renderSide(); return; } n=Math.floor(+n||0); if(n<1||n>200){ toast('1~200번 사이로 정해 주세요'); renderSide(); return; } S.n=n; save(); if(S.ph==='wait') writeCfg(); renderAll(); }
+function setN(n){ if(S.ph==='bet'){ toast('판이 열려 있는 동안에는 바꿀 수 없어요'); renderSide(); return; } n=Math.floor(+n||0); if(n<1||n>6000){ toast('1~6000번 사이로 정해 주세요'); renderSide(); return; } S.n=n; save(); if(S.ph==='wait') writeCfg(); renderAll(); }
 function togglePause(){ S.paused=!S.paused; S.pauseMsg=$('pauseMsg').value.trim()||DEF.pauseMsg; save(); writeCfg(); renderSide(); }
 function resetAll(){ if(!confirm('모든 학생의 대결 전적, 누적 점수, 판 기록을 지우고 열린 방도 모두 닫을까요? (되돌릴 수 없어요)')) return; S.tot={}; S.rounds=[]; S.games={}; S.duel={}; S.bal={}; base&&base.child('rooms').remove().catch(()=>{}); S.res=null; S.ph='wait'; S.rolls=''; S.resetAt=Date.now(); save(); writeCfg(); renderAll(); toast('점수를 초기화했어요'); }
 function changeCode(){ if(!confirm('새 수업 코드를 만들까요? 학생들은 새 코드로 다시 들어와야 해요. (점수 기록은 남아요)')) return; S.code=newCode(); S.ph='wait'; S.res=null; save(); showCode(); openClass(); renderAll(); }
@@ -303,7 +310,7 @@ function setProj(on){ document.body.classList.toggle('proj',on); renderAll(); }
 function renderSide(){
   $('stSeg').innerHTML=[1,2].map(s=>`<button class="${S.st===s?'sel':''}" onclick="setStage(${s})">${s===1?'1단계 한 개':'2단계 두 개의 합'}</button>`).join('');
   $('dnSeg').innerHTML=DC.duelN(S.st).slice().sort((a,b)=>a-b).map(n=>`<button class="${duelN()===n?'sel':''}" onclick="setDN(${n})">${n}번</button>`).join('');
-  if(!(document.activeElement&&$('nSeg').contains(document.activeElement))) $('nSeg').innerHTML=DC.nOpts(S.st).map(n=>`<button class="${S.n===n?'sel':''}" onclick="setN(${n})">${n}번</button>`).join('')+`<label class="nIn">직접 <input type="number" min="1" max="200" value="${S.n}" onchange="setN(+this.value)">번</label>`;
+  if(!(document.activeElement&&$('nSeg').contains(document.activeElement))) $('nSeg').innerHTML=DC.nOpts(S.st).map(n=>`<button class="${S.n===n?'sel':''}" onclick="setN(${n})">${n}번</button>`).join('')+`<label class="nIn">직접 <input type="number" min="1" max="6000" value="${S.n}" onchange="setN(+this.value)">번</label>`;
   const bets=betsNow(), ks=Object.keys(LIVE).sort((a,b)=>LIVE[a].name.localeCompare(LIVE[b].name,'ko',{numeric:true}));
   const on=ks.filter(k=>LIVE[k].online).length;
   $('stuCnt').textContent=`접속 ${on}명${S.ph==='bet'?` · 제출 ${Object.keys(bets).length}명`:''}`;
@@ -312,7 +319,7 @@ function renderSide(){
     return `<li><span class="dot ${L.online?'on':''}"></span><span class="nm">${esc(L.name)}${L.ver&&L.ver!==APP_VER?' <span title="학생 화면 새로고침 필요" style="color:var(--x)">⟳</span>':''}</span>
       ${S.ph==='bet'?(bets[k]?'<span class="ok">✔</span>':'<span class="no">…</span>'):''}${where[k]?`<span class="muted" title="대결 중인 방">⚔${where[k]}</span>`:''}<span class="muted">${S.pt.on?'💰'+bal(k)+' ':''}${t?t.w+'승 '+t.l+'패':''}</span>
       <button class="x" title="기기 바꾸기 (이름 풀어 주기)" onclick="kick('${k}')">🔓</button></li>`; }).join('')||'<li class="muted">아직 들어온 학생이 없어요</li>';
-  $('phTxt').textContent={wait:'기다리는 중 · [새 판 열기]를 누르면 학생이 칩을 놓을 수 있어요.',bet:`판 열림 · 학생이 칩 ${S.n}개를 놓는 중`,roll:'결과 보는 중'}[S.ph];
+  $('phTxt').textContent={wait:'기다리는 중 · [새 판 열기]를 누르면 학생이 칩을 놓을 수 있어요.',bet:`판 열림 · 학생이 칩 ${DC.chipsFor(S.n)}개를 놓는 중`,roll:'결과 보는 중'}[S.ph];
   $('openBtn').disabled=S.ph==='bet'; $('rollBtn').disabled=S.ph!=='bet'; $('waitBtn').disabled=S.ph==='wait';
   $('pOpen').disabled=S.ph==='bet'; $('pRoll').disabled=S.ph!=='bet';
   $('pauseBtn').textContent=S.paused?'▶ 다시 시작':'멈추기'; $('pauseBtn').classList.toggle('acc',S.paused);
@@ -334,14 +341,14 @@ function renderStage(){
   const st=S.st, n=S.n;
   if(S.ph==='wait'){
     el.innerHTML=`<div class="sh">${DC.stageName(st)}</div>
-      <div class="sd">${st===2?'주사위 두 개를 함께 굴려 <b>두 눈의 합</b>을 기록해요.':'주사위 한 개를 굴려 <b>나온 눈</b>을 기록해요.'} 모두 <b>${n}번</b> 굴립니다.</div>
-      <div style="font-size:22px;line-height:1.9;margin:10px 0 18px">① 칩 <b>${n}개</b>를 받아요.<br>② 각 ${st===2?'합':'눈'}이 몇 번 나올지 예상해서 칩을 나눠 놓아요.<br>③ 실제로 나온 횟수와 <b>겹친 칩</b>만큼 점수!</div>
+      <div class="sd">${st===2?'주사위 두 개를 함께 굴려 <b>두 눈의 합</b>을 기록해요.':'주사위 한 개를 굴려 <b>나온 눈</b>을 기록해요.'} 모두 <b>${n.toLocaleString()}번</b> 굴립니다.</div>
+      <div style="font-size:22px;line-height:1.9;margin:10px 0 18px">${DC.isPct(n)?`① 칩 <b>${DC.chipsFor(n)}개</b>를 받아요.<br>② 각 ${st===2?'합':'눈'}이 나올 <b>비율</b>을 예상해서 칩을 나눠 놓아요.<br>③ 내 칩 비율과 실제 비율이 <b>겹친 만큼</b>이 일치도(%)!`:`① 칩 <b>${n}개</b>를 받아요.<br>② 각 ${st===2?'합':'눈'}이 몇 번 나올지 예상해서 칩을 나눠 놓아요.<br>③ 실제로 나온 횟수와 <b>겹친 칩</b>만큼 점수!`}</div>
       <div style="text-align:center">${st===2?DC.dieSVG(3,110)+' '+DC.dieSVG(4,110)+'<span style="font-size:60px;font-weight:900;font-family:Times New Roman,serif;vertical-align:middle"> → 7</span>':[1,2,3,4,5,6].map(v=>DC.dieSVG(v,80)).join(' ')}</div>`;
     return;
   }
   if(S.ph==='bet'){
     const bets=betsNow(), ks=Object.keys(LIVE).sort((a,b)=>LIVE[a].name.localeCompare(LIVE[b].name,'ko',{numeric:true}));
-    el.innerHTML=`<div class="sh">🪙 칩을 놓는 중</div><div class="sd">${DC.stageName(st)} · ${n}번 굴려요 · 칩 ${n}개</div>
+    el.innerHTML=`<div class="sh">🪙 칩을 놓는 중</div><div class="sd">${DC.stageName(st)} · ${n.toLocaleString()}번 굴려요 · 칩 ${DC.chipsFor(n)}개</div>
       <div style="display:flex;align-items:baseline;gap:12px"><span class="bigcnt">${Object.keys(bets).length}</span><span style="font-size:22px;font-weight:700">/ ${ks.filter(k=>LIVE[k].online).length}명 제출</span></div>
       <div class="names">${ks.filter(k=>LIVE[k].online||bets[k]).map(k=>`<span class="${bets[k]?'ok':''}">${S.hideNames?'●':esc(LIVE[k].name)}</span>`).join('')}</div>
       <button class="acc" style="margin-top:22px;font-size:22px;padding:16px 30px" onclick="closeAndRoll()">🎲 마감하고 굴리기</button>`;
@@ -356,9 +363,11 @@ function renderStage(){
   let lastK=-1;
   const step=()=>{
     const k=Math.max(0,Math.min(n,Math.floor((now()-S.at)/dur*n)+1));
+    if(k!==lastK&&k<n&&k-lastK<n/300&&lastK>0){ animT=requestAnimationFrame(step); return; }
     if(k!==lastK){ lastK=k;
       const part=list.slice(0,k), cnt=DC.counts(st,part), x=part[k-1];
       $('bw').innerHTML=DC.boardHTML(st,null,cnt,{max:Math.ceil(n/(st===2?4:3)),theory:k>=n&&S.theory?n:0});
+      $('pctRow').innerHTML=n>=30&&k?`<div class="pct">${cnt.map(c=>`<div>${(c/k*100).toFixed(1)}%</div>`).join('')}</div>`:'';
       $('rollBox').innerHTML=x?(st===2?`${DC.dieSVG(x.a,110)}${DC.dieSVG(x.b,110)}<span class="sumv">= ${x.v}</span>`:DC.dieSVG(x.a,120))+`<span class="cnt">${k} / ${n}번째</span>`:'<span class="cnt">곧 굴려요…</span>';
       if(k>=n){ showResult(cnt); return; }
     }
@@ -370,7 +379,7 @@ function showResult(cnt){
   const st=S.st, n=S.n, res=S.res||{sc:{},rk:{},cnt:0};
   $('rollH').textContent='🎲 결과 · 실제로 나온 횟수';
   const R=S.rounds.find(x=>x.r===S.r)||{bets:{},sc:{}}, bets=R.bets, SC=R.sc, RK=DC.ranks(SC);
-  const names=Object.keys(bets), mb=Math.ceil(n/3);
+  const C=DC.chipsFor(n), U=DC.unit(n), names=Object.keys(bets), mb=Math.ceil(C/3);
   const order=names.sort((a,b)=>SC[b]-SC[a]);
   /* 반 평균 칩 */
   const avg=DC.outs(st).map((_,i)=>names.length?names.reduce((s,nm)=>s+bets[nm][i],0)/names.length:0);
@@ -379,10 +388,10 @@ function showResult(cnt){
       <label><input type="checkbox" ${S.theory?'checked':''} onchange="S.theory=this.checked;save();renderStage()"> 이론값 점선 보기 <span class="muted">(${n}번 굴리면 평균적으로 나오는 횟수)</span></label>
       <label><input type="checkbox" ${S.hideNames?'checked':''} onchange="S.hideNames=this.checked;save();renderStage()"> 이름 가리기</label></div>
     ${names.length?`<div class="resg">
-      <div class="box2"><h4>🏆 이번 판 순위 (${res.cnt}명 · 점수 = 겹친 칩)</h4>
+      <div class="box2"><h4>🏆 이번 판 순위 (${res.cnt}명 · ${U==='%'?'일치도 = 겹친 비율':'점수 = 겹친 칩'})</h4>
         <table class="rk"><tr><th>등수</th><th>이름</th><th>점수</th><th>칩 모양</th></tr>
-        ${order.slice(0,8).map(nm=>`<tr><td><b>${RK[nm]}</b></td><td class="nm">${S.hideNames?'●●●':esc(nm)}</td><td><b>${SC[nm]}</b></td><td><div class="minib">${DC.boardHTML(st,bets[nm],null,{max:mb})}</div></td></tr>`).join('')}</table>
-        ${order.length>8?`<div class="muted" style="margin-top:6px">… 그 외 ${order.length-8}명 · 가장 낮은 점수 ${SC[order[order.length-1]]}점</div>`:''}</div>
+        ${order.slice(0,8).map(nm=>`<tr><td><b>${RK[nm]}</b></td><td class="nm">${S.hideNames?'●●●':esc(nm)}</td><td><b>${SC[nm]}${U==='%'?'%':''}</b></td><td><div class="minib">${DC.boardHTML(st,bets[nm],null,{max:mb})}</div></td></tr>`).join('')}</table>
+        ${order.length>8?`<div class="muted" style="margin-top:6px">… 그 외 ${order.length-8}명 · 가장 낮은 점수 ${SC[order[order.length-1]]}${U}</div>`:''}</div>
       <div><div class="box2"><h4>👥 우리 반이 놓은 칩 (평균)</h4>${DC.boardHTML(st,avg.map(x=>+x.toFixed(1)),null,{max:mb})}</div>
         <div class="box2" style="margin-top:12px"><h4>🤔 생각해 볼 질문</h4><div style="font-size:17px;line-height:1.8">${st===2?'· 어떤 합이 많이 나왔나요? 왜 그럴까요?<br>· 합이 2가 되는 경우와 7이 되는 경우는 각각 몇 가지일까요?':'· 1등은 칩을 어떻게 놓았나요?<br>· 한 곳에 몰아 놓은 친구는 왜 점수가 낮을까요?<br>· 다시 굴려도 1등 전략이 또 이길까요?'}</div></div></div>
     </div>`:'<div class="muted" style="margin-top:14px">이번 판에 칩을 제출한 학생이 없어요.</div>'}
@@ -426,25 +435,25 @@ function renderDuel(el){
   const games=Object.values(S.games).sort((a,b)=>b.t-a.t);
   const ks=Object.keys(S.duel).sort((a,b)=>(S.duel[b].w-S.duel[a].w)||(S.duel[a].l-S.duel[b].l));
   const nm=x=>S.hideNames?'●●●':esc(x);
-  /* 이긴 쪽 / 진 쪽 동그라미 평균 모양 (이 단계·횟수만) */
+  /* 이긴 쪽 / 진 쪽 칩 평균 모양 (이 단계·횟수만) */
   const same=games.filter(g=>g.st===st&&g.n===n), win=[], lose=[];
   same.forEach(g=>{ if(g.a.s>g.b.s){ win.push(g.a.c); lose.push(g.b.c); } else if(g.b.s>g.a.s){ win.push(g.b.c); lose.push(g.a.c); } });
   const avg=a=>DC.outs(st).map((_,i)=>a.length?+(a.reduce((s,c)=>s+c[i],0)/a.length).toFixed(1):0);
-  el.innerHTML=`<div class="sh">⚔ 1:1 동그라미 대결</div>
-    <div class="sd">${DC.stageName(st)} · 동그라미 ${n}개 · 둘이 번갈아 ${n}번 굴림 (누가 굴려도 두 사람 표에 모두 적용). 학생은 [방 만들기] 또는 기다리는 방을 눌러 들어가요.</div>
+  el.innerHTML=`<div class="sh">⚔ 1:1 칩 대결</div>
+    <div class="sd">${DC.stageName(st)} · 칩 ${n}개 · 둘이 번갈아 ${n}번 굴림 (누가 굴려도 두 사람 표에 모두 적용). 학생은 [방 만들기] 또는 기다리는 방을 눌러 들어가요.</div>
     <div class="resg" style="margin-top:0">
       <div class="box2"><h4>🎮 지금 열린 방 (${rooms.length})</h4>
         ${rooms.length?`<table class="rk"><tr><th>방</th><th>단</th><th>선수</th><th>맞힘</th><th>진행</th></tr>${rooms.map(([rid,r])=>{ const list=DC.decode(r.st,r.rolls).slice(0,r.n), k=list.length;
           const ha=r.a.c?DC.sum(DC.hits(r.st,r.a.c,list)):'-', hb=r.b&&r.b.c?DC.sum(DC.hits(r.st,r.b.c,list)):'-';
-          const stt=!r.b?'친구 기다림':!(r.a.rd&&r.b.rd)?'동그라미 놓는 중':k>=r.n?'끝':`${k}/${r.n}번`;
+          const stt=!r.b?'친구 기다림':!(r.a.rd&&r.b.rd)?'칩 놓는 중':k>=r.n?'끝':`${k}/${r.n}번`;
           return `<tr><td><b>${rid}</b></td><td>${r.st}</td><td class="nm">${nm(r.a.name)}${r.a.on===false?' 💤':''} vs ${r.b?nm(r.b.name)+(r.b.on===false?' 💤':''):'…'}</td><td>${ha} : ${hb}</td><td>${stt}</td></tr>`; }).join('')}</table>`:'<div class="muted">아직 없어요</div>'}
         <button class="ghost sm" style="margin-top:8px" onclick="clearRooms()">🧹 방 모두 닫기</button></div>
       <div class="box2"><h4>🏆 전적 (${games.length}판)</h4>
         ${ks.length?`<table class="rk"><tr><th>순</th><th>이름</th><th>승</th><th>패</th><th>무</th><th>평균 맞힘</th></tr>${ks.slice(0,12).map((k,i)=>{ const t=S.duel[k]; return `<tr><td>${i+1}</td><td class="nm">${nm(t.name)}</td><td><b>${t.w}</b></td><td>${t.l}</td><td>${t.d}</td><td>${t.g?(t.hit/t.g).toFixed(1):'-'}</td></tr>`; }).join('')}</table>${ks.length>12?`<div class="muted">… 외 ${ks.length-12}명</div>`:''}`:'<div class="muted">끝난 대결이 아직 없어요</div>'}</div>
     </div>
     ${ptCard()}
-    ${win.length?`<div class="resg"><div class="box2"><h4>😀 이긴 사람들의 동그라미 (평균 · ${win.length}판)</h4><div style="--bh:120px">${DC.boardHTML(st,avg(win),null,{max:Math.ceil(n/3)})}</div></div>
-      <div class="box2"><h4>😢 진 사람들의 동그라미 (평균)</h4><div style="--bh:120px">${DC.boardHTML(st,avg(lose),null,{max:Math.ceil(n/3)})}</div></div></div>`:''}
+    ${win.length?`<div class="resg"><div class="box2"><h4>😀 이긴 사람들의 칩 (평균 · ${win.length}판)</h4><div style="--bh:120px">${DC.boardHTML(st,avg(win),null,{max:Math.ceil(n/3)})}</div></div>
+      <div class="box2"><h4>😢 진 사람들의 칩 (평균)</h4><div style="--bh:120px">${DC.boardHTML(st,avg(lose),null,{max:Math.ceil(n/3)})}</div></div></div>`:''}
     ${games.length?`<h4 style="margin:16px 0 6px">최근 대결</h4><div class="glist">${games.slice(0,4).map(g=>{ const list=DC.decode(g.st,g.rolls).slice(0,g.n), R2=DC.rows(g.st,g.n);
       return `<div class="box2 gm"><div><b>${nm(g.a.name)}</b> ${g.a.s} : ${g.b.s} <b>${nm(g.b.name)}</b> <span class="muted">(${g.st}단계 · 방 ${g.rid}${g.stake?` · 💰${g.stake}점`:''})</span></div>
         <div class="two"><div>${DC.tableHTML(g.st,R2,g.a.c,DC.hits(g.st,g.a.c,list),{small:true})}</div><div>${DC.tableHTML(g.st,R2,g.b.c,DC.hits(g.st,g.b.c,list),{small:true})}</div></div></div>`; }).join('')}</div>`:''}
@@ -470,10 +479,10 @@ function clearRooms(){ if(!confirm('열린 방을 모두 닫을까요? 대결 �
 /* 🔬 모의실험: 같은 굴림으로 여러 전략을 많은 판 겨룸 */
 let SIM={games:100, pick:{}, out:null};
 function simStrats(){
-  const st=S.st, n=S.n, list=DC.presets(st,n).map(p=>({id:p.id,name:p.name,c:p.c}));
+  const st=S.st, n=S.n, list=DC.presets(st,n).map(p=>({id:p.id,name:p.name,c:p.c}));   // 학생 칩은 굴리는 횟수에 맞춰 비율대로 늘림
   const last=[...S.rounds].reverse().find(r=>r.st===st&&r.n===n);
   if(last){ const nm=Object.keys(last.sc).sort((a,b)=>last.sc[b]-last.sc[a]);
-    nm.slice(0,6).forEach((x,i)=>list.push({id:'s:'+x, name:(S.hideNames?`학생 ${i+1}`:x)+' (지난 판 '+last.sc[x]+'점)', c:last.bets[x]})); }
+    nm.slice(0,6).forEach((x,i)=>list.push({id:'s:'+x, name:(S.hideNames?`학생 ${i+1}`:x)+' (지난 판 '+last.sc[x]+DC.unit(last.n)+')', c:DC.scaleChips(last.bets[x],n)})); }
   return list;
 }
 function renderSim(el){
@@ -532,7 +541,7 @@ function renderRec(el){
     ${S.rounds.map((r,i)=>{ const c=DC.counts(r.st,DC.decode(r.st,r.rolls)), sc=Object.values(r.sc); return `<tr><td>${i+1}</td><td>${r.st}</td><td>${r.n}</td><td style="font-size:13px">${DC.outs(r.st).map((v,j)=>`${v}:${c[j]}`).join(' ')}</td><td>${sc.length}</td><td>${sc.length?Math.max(...sc):'-'}</td></tr>`; }).reverse().join('')}</table>`;
 }
 function exportCSV(){
-  const rows=[['종류','판','단계','횟수','이름','점수(맞힘)','칩·동그라미','실제 횟수 / 상대']];
+  const rows=[['종류','판','단계','횟수','이름','점수(맞힘)','칩·칩','실제 횟수 / 상대']];
   Object.values(S.games).sort((a,b)=>a.t-b.t).forEach((g,i)=>{ const c=DC.counts(g.st,DC.decode(g.st,g.rolls).slice(0,g.n)).join(' ');
     rows.push(['대결',i+1,g.st,g.n,g.a.name,g.a.s,g.a.c.join(' '),'vs '+g.b.name+' ('+c+')']); rows.push(['대결',i+1,g.st,g.n,g.b.name,g.b.s,g.b.c.join(' '),'vs '+g.a.name+' ('+c+')']); });
   S.rounds.forEach((r,i)=>{ const c=DC.counts(r.st,DC.decode(r.st,r.rolls)).join(' '); for(const nm in r.sc) rows.push(['반 전체',i+1,r.st,r.n,nm,r.sc[nm],r.bets[nm].join(' '),c]); });
@@ -582,6 +591,7 @@ function renderSlide(){
   else if(sd.kind==='goal') h=hd+`<div class="sgoal"><div class="gl">지난 시간 목표</div>${ed('prev',sd.prev,'div')}<div class="gl">이번 시간 목표</div>${ed('now',sd.now,'div')}</div>`;
   else if(sd.kind==='join') h=hd+`<div class="sjoin"><div class="jl">${ed('body',sd.body)}</div><div class="jr"><div class="qr" id="slQR"></div><div class="jc">수업 코드 <b>${S.code}</b></div><div class="ju">${esc(studentURL())}</div></div></div>`;
   else if(sd.kind==='text') h=hd+`<div class="stext">${ed('body',sd.body)}</div>`;
+  else if(sd.kind==='ask') h=hd+`<div class="sask"><div class="aq">${ed('q',sd.q)}</div>${sd.hint?`<div class="ah">${ed('hint',sd.hint)}</div>`:''}<div class="sctl" id="askCtl"></div><div class="ans" id="askBox"></div></div>`;
   else h=hd+`<div class="sprompt">${ed('prompt',sd.prompt)}</div>${sd.live==='chip'?`<div class="sctl" id="slCtl"></div>`:''}<div class="slive" id="slLive"></div>`;
   $('slFrame').innerHTML=h;
   $('slPage').textContent=`${i+1} / ${L.length}`;
@@ -592,14 +602,33 @@ function renderSlide(){
   $('slFrame').querySelectorAll('.ed').forEach(el=>{ el.contentEditable=SL.editing?'true':'false';
     el.onblur=()=>{ if(!SL.editing) return; S.slEdit=S.slEdit||{}; const o=S.slEdit[sd.id]||(S.slEdit[sd.id]={}); o[el.dataset.f]=el.innerHTML; save(); }; });
   if(sd.kind==='join'&&window.QRCode){ try{ new QRCode($('slQR'),{text:studentURL(),width:300,height:300}); }catch(e){} }
+  if(sd.kind!=='ask'&&S.ask&&S.ask.open){ S.ask.open=false; save(); writeCfg(); }   // 질문 장을 떠나면 질문 닫기
+  if(sd.kind==='ask') renderAsk();
   if(sd.kind==='live'){ S.view=VIEW[sd.live]||'game'; $('slLive').appendChild($('stage')); renderAll(); renderSlCtl(); }
   else { $('stageHome').appendChild($('stage')); }
   fitSlide();
 }
+function curSlide(){ const L=slides(); return L[Math.min(S.slide||0,L.length-1)]; }
+/* ❓ 생각 모으기: 학생이 패드에 쓴 답을 슬라이드에 모아 보여 줌 */
+function renderAsk(){
+  const c=$('askCtl'), b=$('askBox'); if(!c||!b) return;
+  const sd=curSlide(), open=S.ask&&S.ask.open, id=S.ask&&S.ask.id;
+  const ans=Object.values(LIVE).filter(x=>x.ans&&x.ans.id===id&&x.ans.t.trim());
+  c.innerHTML=`<span class="st">${open?`학생 패드에 질문이 떠 있어요 · 답 ${ans.length}명`:'질문을 보내면 학생 패드에 쓰는 칸이 떠요'}</span>
+    ${open?`<button class="ghost" onclick="S.ask.open=false;save();writeCfg();renderAsk()">질문 닫기</button>`:`<button class="acc" onclick="sendAsk()">❓ 학생에게 질문 보내기</button>`}
+    <label style="font-size:18px"><input type="checkbox" ${S.hideNames?'checked':''} onchange="S.hideNames=this.checked;save();renderAsk()"> 이름 가리기</label>`;
+  b.innerHTML=(open||ans.length)?ans.map(x=>`<div class="a"><div class="t">${esc(x.ans.t)}</div>${S.hideNames?'':`<div class="n">${esc(x.name)}</div>`}</div>`).join(''):'';
+}
+function sendAsk(){ const sd=curSlide(), q=(document.createElement('div')); q.innerHTML=sd.q||''; S.ask={id:Date.now(),q:q.textContent.trim().slice(0,200),open:true}; save(); writeCfg(); renderAsk(); }
+function setPause(on){ S.paused=on; S.pauseMsg=$('pauseMsg').value.trim()||DEF.pauseMsg; save(); writeCfg(); renderSide(); slPauseBtns(); }
+function slPauseBtns(){ const a=$('slPauseOn'), b=$('slPauseOff'); if(!a) return; a.classList.toggle('acc',!!S.paused); b.classList.toggle('on2',!S.paused); }
 function renderSlCtl(){
+  slPauseBtns(); if(curSlide().kind==='ask') renderAsk();
   const c=$('slCtl'); if(!c) return;
+  const ns=curSlide().ns;
   const bets=Object.keys(betsNow()).length;
   c.innerHTML=`<span class="st">${DC.stageName(S.st)} · ${S.n}번 · ${S.ph==='wait'?'기다리는 중':S.ph==='bet'?`칩 놓는 중 (제출 ${bets}명)`:'결과'}</span>
+    ${ns?ns.map(n=>`<button class="${S.n===n?'acc':'ghost'}" ${S.ph==='bet'?'disabled':''} onclick="setN(${n});renderSlCtl()">${n.toLocaleString()}번</button>`).join(''):''}
     <button onclick="openRound();renderSlCtl()" ${S.ph==='bet'?'disabled':''}>▶ 판 열기</button>
     <button class="acc" onclick="closeAndRoll();renderSlCtl()" ${S.ph!=='bet'?'disabled':''}>🎲 굴리기</button>
     <button class="ghost" onclick="toWait();renderSlCtl()" ${S.ph==='wait'?'disabled':''}>결과 닫기</button>`;

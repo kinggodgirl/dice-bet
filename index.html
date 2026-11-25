@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>주사위 동그라미 대결</title>
+<title>주사위 칩 대결</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
@@ -88,7 +88,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
   <!-- 첫 화면 -->
   <div id="home">
     <div class="box card">
-      <h1>🎲 주사위 동그라미 대결</h1>
+      <h1>🎲 주사위 칩 대결</h1>
       <div class="sub">주사위를 여러 번 굴리면 무엇이 많이 나올까?</div>
       <label class="small">번호와 이름 (예: 7 김민준)</label>
       <input id="myName" maxlength="10" autocomplete="off">
@@ -103,7 +103,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
   <!-- 게임 화면 -->
   <div id="main" class="hide">
     <div class="top">
-      <div class="ttl" id="stageTtl">🎲 주사위 동그라미 대결</div>
+      <div class="ttl" id="stageTtl">🎲 주사위 칩 대결</div>
       <span class="pill" id="who"></span>
       <span class="pill tot" id="totPill">누적 0점</span>
       <span class="pill"><span class="dot" id="connDot"></span><span id="connTxt">연결 중</span></span>
@@ -114,10 +114,16 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 </div>
 
 <div class="overlay" id="pauseOv"><div class="box"><div style="font-size:44px">✋</div><div id="pauseMsg" style="font-size:24px;font-weight:900;margin-top:6px">선생님을 봐 주세요</div></div></div>
+<div class="overlay" id="askOv" style="z-index:45"><div class="box" style="max-width:640px;text-align:left">
+  <div style="font-size:15px;color:var(--muted);font-weight:700">❓ 선생님 질문</div>
+  <div id="askQ" style="font-size:22px;font-weight:900;margin:6px 0 12px;line-height:1.5"></div>
+  <textarea id="askIn" maxlength="150" rows="3" style="width:100%;font:inherit;font-size:20px;padding:10px;border:2px solid var(--line);border-radius:12px" placeholder="생각을 짧게 써 보세요"></textarea>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:10px"><span id="askSt" class="muted" style="flex:1"></span><button class="acc" onclick="sendAns()">보내기</button></div>
+</div></div>
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.3;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261125.4;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -158,14 +164,15 @@ function render(){
   renderLobby();
   if(v&&$('ridIn')){ $('ridIn').value=v; if(f) $('ridIn').focus(); }
 }
+const CH=()=>DC.chipsFor(CFG.n);   // 놓을 칩 개수 (60번 넘게 굴리면 60개로 비율 예상)
 function chipsOk(){ return MY.chips && MY.chips.length===DC.outs(CFG.st).length; }
 function renderBet(){
   stopAnim();
-  const st=CFG.st, n=CFG.n;
-  if(MY.r!==CFG.r||!chipsOk()){ MY.r=CFG.r; MY.chips=LS.get('dice-chips-'+st+'-'+n,null); if(!MY.chips||MY.chips.length!==DC.outs(st).length||DC.sum(MY.chips)>n) MY.chips=DC.outs(st).map(()=>0); MY.sentSig=null; MY.sent=null; }
+  const st=CFG.st, n=CFG.n, C=CH(), pct=DC.isPct(n);
+  if(MY.r!==CFG.r||!chipsOk()){ MY.r=CFG.r; MY.chips=LS.get('dice-chips-'+st+'-'+C,null); if(!MY.chips||MY.chips.length!==DC.outs(st).length||DC.sum(MY.chips)>C) MY.chips=DC.outs(st).map(()=>0); MY.sentSig=null; MY.sent=null; }
   const what=st===2?'주사위 두 개를 함께 굴려 나온 두 눈의 합':'주사위 한 개를 굴려 나온 눈';
-  $('view').innerHTML=`<div class="phase-h">🪙 칩 ${n}개를 놓으세요</div>
-    <div class="phase-d">${what}을 <b>${n}번</b> 기록해요. 각 수가 <b>몇 번 나올지</b> 예상해서 칩을 놓으세요.<br>나중에 <b>실제로 나온 횟수와 겹친 칩</b>만큼 점수가 돼요. (막대를 누르거나 끌어도 돼요)</div>
+  $('view').innerHTML=`<div class="phase-h">🪙 칩 ${C}개를 놓으세요</div>
+    <div class="phase-d">${pct?`${what}을 <b>${n.toLocaleString()}번</b> 기록해요. 칩 ${C}개로 각 수가 나올 <b>비율</b>을 예상해서 놓으세요.<br>내 칩의 비율과 <b>실제로 나온 비율이 겹친 만큼</b>이 점수(일치도 %)예요. (막대를 누르거나 끌어도 돼요)`:`${what}을 <b>${n}번</b> 기록해요. 각 수가 <b>몇 번 나올지</b> 예상해서 칩을 놓으세요.<br>나중에 <b>실제로 나온 횟수와 겹친 칩</b>만큼 점수가 돼요. (막대를 누르거나 끌어도 돼요)`}</div>
     <div id="bwrap" style="--bh:${st===2?240:270}px"></div>
     <div class="left"><span class="big" id="leftTxt"></span><span class="sp"></span>
       <button class="ghost" onclick="clearChips()">모두 빼기</button>
@@ -175,18 +182,18 @@ function renderBet(){
 }
 function drawBoard(){
   const w=$('bwrap'); if(!w) return;
-  w.innerHTML=DC.boardHTML(CFG.st,MY.chips,null,{edit:true,max:DC.editMax(CFG.n,MY.chips)});
-  DC.bindBoard(w,()=>MY.chips,setChips,CFG.n);
+  w.innerHTML=DC.boardHTML(CFG.st,MY.chips,null,{edit:true,max:DC.editMax(CH(),MY.chips)});
+  DC.bindBoard(w,()=>MY.chips,setChips,CH());
 }
 function setChips(c,flag){
   if(CFG.ph!=='bet') return;
-  MY.chips=c; LS.set('dice-chips-'+CFG.st+'-'+CFG.n,c);
+  MY.chips=c; LS.set('dice-chips-'+CFG.st+'-'+CH(),c);
   if(!DC.patchBoard($('bwrap'),c)) drawBoard();
   updLeft(); if(flag==='full') toast('칩을 다 놓았어요. 다른 곳에서 빼야 더 놓을 수 있어요',1800);
 }
 function clearChips(){ setChips(DC.outs(CFG.st).map(()=>0)); }
 function updLeft(){
-  const left=CFG.n-DC.sum(MY.chips), el=$('leftTxt'); if(!el) return;
+  const left=CH()-DC.sum(MY.chips), el=$('leftTxt'); if(!el) return;
   el.textContent=left?`남은 칩 ${left}개`:'✔ 칩을 다 놓았어요'; el.classList.toggle('full',!left);
   $('sendBtn').disabled=!!left;
   const sig=MY.chips.join(','), box=$('sentBox');
@@ -196,7 +203,7 @@ function updLeft(){
     : `<div class="sent warn">✏ 칩을 고쳤어요. [제출하기]를 다시 눌러야 바뀐 칩으로 겨뤄요.</div>`;
 }
 function sendBet(){
-  if(DC.sum(MY.chips)!==CFG.n) return;
+  if(DC.sum(MY.chips)!==CH()) return;
   if(SOLO) return soloRoll();
   const c=MY.chips.slice(), sig=c.join(','), r=CFG.r;
   me().child('bet').set({r, c, t:TS}).then(()=>{ if(CFG.r===r){ MY.sentSig=sig; MY.sent=c; updLeft(); toast('제출했어요'); } }).catch(e=>toast('제출 실패: '+e.message,4000));
@@ -208,19 +215,21 @@ function stopAnim(){ cancelAnimationFrame(animT); animT=null; }
 function renderRoll(){
   const st=CFG.st, n=CFG.n, list=DC.decode(st,CFG.rolls);
   const mine=MY.r===CFG.r&&MY.sent&&MY.sent.length===DC.outs(st).length?MY.sent:null;
-  const res=CFG.res||{}, myS=res.sc?res.sc[CL.key]:(SOLO&&mine?DC.score(mine,DC.counts(st,list)):undefined);
+  const res=CFG.res||{}, myS=res.sc?res.sc[CL.key]:(SOLO&&mine?DC.pscore(mine,DC.counts(st,list),n):undefined), pct=DC.isPct(n), C=DC.chipsFor(n);
   $('view').innerHTML=`<div class="phase-h" id="rollH">🎲 굴리는 중…</div>
     <div class="rollbox" id="rollBox"></div>
     <div id="bwrap" style="--bh:${st===2?220:250}px"></div>
-    <div class="legend">${mine?'<span><i class="lc"></i>내 칩</span>':''}<span><i class="la"></i>실제로 나온 횟수</span>${mine?'<span><i class="lo"></i>겹친 칩 = 점수</span>':''}</div>
+    <div class="legend">${mine?'<span><i class="lc"></i>내 칩</span>':''}<span><i class="la"></i>실제로 나온 ${pct?'비율(%)':'횟수'}</span>${mine?`<span><i class="lo"></i>${pct?'겹친 비율 = 일치도':'겹친 칩 = 점수'}</span>`:''}${pct&&mine?'<span>(내 칩도 비율 %로 나타냄)</span>':''}</div>
     <div id="after"></div>`;
   const dur=animDur(n), start=SOLO?CFG.at:(+CFG.at||0);
   let lastK=-1;
   const step=()=>{
     const t=now()-start, k=Math.max(0,Math.min(n, Math.floor(t/dur*n)+1));
+    if(k!==lastK&&k<n&&k-lastK<n/300&&lastK>0){ animT=requestAnimationFrame(step); return; }   // 아주 많이 굴릴 땐 너무 자주 그리지 않음
     if(k!==lastK){ lastK=k;
       const part=list.slice(0,k), cnt=DC.counts(st,part), x=part[k-1];
-      $('bwrap').innerHTML=DC.boardHTML(st,mine,cnt,{max:Math.max(Math.ceil(n/(st===2?4:3)),...(mine||[0]))});
+      $('bwrap').innerHTML=pct?DC.boardHTML(st,mine?DC.toPct(mine,C):null,DC.toPct(cnt,k),{max:st===2?25:35})
+        :DC.boardHTML(st,mine,cnt,{max:Math.max(Math.ceil(n/(st===2?4:3)),...(mine||[0]))});
       $('rollBox').innerHTML = x ? (st===2?`${DC.dieSVG(x.a,80)}${DC.dieSVG(x.b,80)}<span class="sumv">= ${x.v}</span>`:DC.dieSVG(x.a,90))+`<span class="cnt">${k} / ${n}번째</span>`:'';
       if(k>=n){ finish(mine,cnt,myS); return; }
     }
@@ -231,28 +240,28 @@ function renderRoll(){
 }
 function finish(mine,cnt,myS){
   stopAnim();
-  const st=CFG.st, res=CFG.res||{};
+  const st=CFG.st, res=CFG.res||{}, U=DC.unit(CFG.n), C=DC.chipsFor(CFG.n), mx=Math.ceil(C/3);
   $('rollH').textContent='🎲 결과';
   let h='';
   if(mine&&myS!=null){
     const rk=res.rk&&res.rk[CL.key];
-    h+=`<div class="score"><div class="muted">내 점수 (겹친 칩)</div><div class="n">${myS}점</div>${rk?`<div class="r">반에서 ${rk}등 <span class="muted">/ ${res.cnt}명</span></div>`:''}</div>`;
+    h+=`<div class="score"><div class="muted">${U==='%'?'내 일치도 (겹친 비율)':'내 점수 (겹친 칩)'}</div><div class="n">${myS}${U}</div>${rk?`<div class="r">반에서 ${rk}등 <span class="muted">/ ${res.cnt}명</span></div>`:''}</div>`;
   } else if(!SOLO) h+=`<div class="sent warn" style="text-align:center">이번 판에는 칩을 제출하지 않았어요.</div>`;
   if(!SOLO&&res.top&&res.top.length){
-    h+=`<div class="mini"><div class="card"><h4>🥇 이번 판 1등의 칩 (${res.best}점)</h4>${DC.boardHTML(st,res.top[0],null,{max:Math.ceil(CFG.n/3)})}</div>
-      ${mine?`<div class="card"><h4>🙋 내 칩 (${myS}점)</h4>${DC.boardHTML(st,mine,null,{max:Math.ceil(CFG.n/3)})}</div>`:''}</div>`;
+    h+=`<div class="mini"><div class="card"><h4>🥇 이번 판 1등의 칩 (${res.best}${U})</h4>${DC.boardHTML(st,res.top[0],null,{max:mx})}</div>
+      ${mine?`<div class="card"><h4>🙋 내 칩 (${myS}${U})</h4>${DC.boardHTML(st,mine,null,{max:mx})}</div>`:''}</div>`;
   }
   h+=`<div class="card" style="margin-top:12px"><h4>🎲 굴린 주사위 전체 (${CFG.n}번)</h4>${DC.allDiceHTML(st,DC.decode(st,CFG.rolls))}</div>`;
   h+=`<div class="think">🤔 ${st===2?'어떤 합이 많이 나왔나요? 그 합이 왜 많이 나올까요? 두 주사위의 눈을 짝지어 생각해 보세요.':'점수를 많이 받으려면 칩을 어떻게 놓는 게 좋을까요? 1등의 칩 모양과 내 칩 모양을 비교해 보세요.'}</div>`;
   if(SOLO) h+=`<div style="text-align:center;margin-top:14px"><button class="acc" style="font-size:19px;padding:14px 26px" onclick="soloAgain()">다시 하기</button> <button class="ghost" onclick="CFG={ph:'wait'};render()">처음으로</button></div>`;
   $('after').innerHTML=h;
   if(mine&&myS!=null&&shownR!==CFG.r){ shownR=CFG.r;
-    HIST=HIST.filter(x=>x.r!==CFG.r); HIST.unshift({r:CFG.r,st,n:CFG.n,s:myS,rk:res.rk?res.rk[CL.key]:null,cnt:res.cnt||null}); HIST=HIST.slice(0,40); LS.set(histKey(),HIST); renderHist(); setTop(); }
+    HIST=HIST.filter(x=>x.r!==CFG.r); HIST.unshift({r:CFG.r,st,n:CFG.n,u:U,s:myS,rk:res.rk?res.rk[CL.key]:null,cnt:res.cnt||null}); HIST=HIST.slice(0,40); LS.set(histKey(),HIST); renderHist(); setTop(); }
 }
 function renderHist(){
   if(!HIST.length){ $('histCard').classList.add('hide'); return; }
   $('histCard').classList.remove('hide');
-  $('histBox').innerHTML=`<table class="hist"><tr><th>판</th><th>단계</th><th>칩</th><th>점수</th>${SOLO?'':'<th>등수</th>'}</tr>${HIST.slice(0,12).map((h,i)=>`<tr><td>${HIST.length-i}</td><td>${h.st}단계</td><td>${h.n}개</td><td><b>${h.s}</b></td>${SOLO?'':`<td>${h.rk?h.rk+'등 / '+h.cnt+'명':'-'}</td>`}</tr>`).join('')}</table>`;
+  $('histBox').innerHTML=`<table class="hist"><tr><th>판</th><th>단계</th><th>굴림</th><th>점수</th>${SOLO?'':'<th>등수</th>'}</tr>${HIST.slice(0,12).map((h,i)=>`<tr><td>${HIST.length-i}</td><td>${h.st}단계</td><td>${h.n}번</td><td><b>${h.s}${h.u==='%'?'%':''}</b></td>${SOLO?'':`<td>${h.rk?h.rk+'등 / '+h.cnt+'명':'-'}</td>`}</tr>`).join('')}</table>`;
 }
 
 /* ---------- 혼자 연습 ---------- */
@@ -268,14 +277,14 @@ function renderSoloPick(){
 function soloAgain(){ CFG={ph:'bet',st:soloSt,n:soloN,r:'s'+Date.now()}; MY.r=null; render(); }
 function soloRoll(){ MY.sentSig=MY.chips.join(','); MY.sent=MY.chips.slice(); CFG=Object.assign({},CFG,{ph:'roll',rolls:DC.roll(CFG.st,CFG.n),at:now()}); render(); }
 
-/* ---------- 1:1 동그라미 대결 ----------
+/* ---------- 1:1 칩 대결 ----------
    dice/{코드}/rooms/{방번호} = {st, n, g(몇 번째 판), a:{uid,name,key,on,c,rd}, b:{…}, rolls:'굴린 결과', t}
    a 가 방을 만든 사람. 굴리는 차례: 굴린 횟수가 짝수면 a, 홀수면 b.
 ------------------------------------------------------------ */
 let ROOM=null;              // {rid, slot, d(방 데이터), bot}
 let ROOMS={};               // 수업의 모든 방 (기다리는 방 목록용)
 let SHOWN=0, rollAnimT=null, rolling=false;
-let DRAFT=null;             // 내가 놓는 중인 동그라미
+let DRAFT=null;             // 내가 놓는 중인 칩
 const other=s=>s==='a'?'b':'a';
 const step=st=>st===2?2:1;
 function duelSet(){ return SOLO?{st:soloSt,n:DC.duelN(soloSt)[0]}:{st:+CFG.dst||1,n:+CFG.dn||DC.duelN(+CFG.dst||1)[0]}; }
@@ -291,8 +300,8 @@ function renderLobby(){
   const {st,n}=duelSet();
   const open=Object.entries(ROOMS).filter(([rid,r])=>r&&r.a&&!r.b&&r.a.on&&r.st===st&&r.n===n&&r.a.key!==CL.key).sort((x,y)=>(y[1].t||0)-(x[1].t||0));
   const R=rec();
-  $('view').innerHTML=`<div class="phase-h">⚔ 1:1 동그라미 대결</div>
-    <div class="phase-d"><b>${DC.stageName(st)}</b> · 동그라미 <b>${n}개</b>를 표에 놓고, 둘이 번갈아 <b>${n}번</b> 굴려요.<br>${st===2?'두 주사위 눈의 합':'나온 눈'}에 내 동그라미가 있으면 ✔ 맞힘! 더 많이 맞힌 사람이 이겨요.</div>
+  $('view').innerHTML=`<div class="phase-h">⚔ 1:1 칩 대결</div>
+    <div class="phase-d"><b>${DC.stageName(st)}</b> · 칩 <b>${n}개</b>를 표에 놓고, 둘이 번갈아 <b>${n}번</b> 굴려요.<br>${st===2?'두 주사위 눈의 합':'나온 눈'}에 내 칩이 있으면 ✔ 맞힘! 더 많이 맞힌 사람이 이겨요.</div>
     ${SOLO?`<div class="cards">${[1,2].map(s=>`<button class="${s===soloSt?'sel':''}" onclick="soloSt=${s};render()"><b>${DC.stageName(s)}</b></button>`).join('')}</div>`:''}
     ${SOLO?'':`<div class="lobby">
       <button class="acc big" onclick="createRoom()">＋ 방 만들기</button>
@@ -378,22 +387,22 @@ function renderRoom(){
       <div class="phase-d" style="text-align:center">친구에게 방 번호를 알려 주세요. 친구가 들어오면 바로 시작해요.</div>
       <div style="text-align:center"><button class="ghost" onclick="leaveRoom()">방 닫기</button></div>`; return;
   }
-  /* ② 동그라미 놓기 */
+  /* ② 칩 놓기 */
   if(!me.rd){
     if(!DRAFT||DRAFT.length!==DC.outs(st).length) DRAFT=DC.outs(st).map(()=>0);
     const left=n-DC.sum(DRAFT);
     $('view').innerHTML=`<div class="vs">나 <b>vs</b> ${opName}${op.rd?' <span class="okb">놓기 끝</span>':''}</div>
-      <div class="phase-h">⭕ 동그라미 ${n}개를 놓으세요</div>
-      <div class="phase-d">${st===2?'두 주사위 눈의 합':'주사위 눈'}이 몇 번 나올지 생각해서 칸을 눌러 동그라미를 놓아요. 다시 누르면 빠져요.</div>
+      <div class="phase-h">🪙 칩 ${n}개를 놓으세요</div>
+      <div class="phase-d">${st===2?'두 주사위 눈의 합':'주사위 눈'}이 몇 번 나올지 생각해서 칸을 눌러 칩을 놓아요. 다시 누르면 빠져요.</div>
       ${betRow(op)}
       <div id="tabw">${DC.tableHTML(st,R,DRAFT,null,{edit:true})}</div>
-      <div class="left"><span class="big ${left?'':'full'}">${left?`남은 동그라미 ${left}개`:'✔ 다 놓았어요'}</span><span class="sp"></span>
+      <div class="left"><span class="big ${left?'':'full'}">${left?`남은 칩 ${left}개`:'✔ 다 놓았어요'}</span><span class="sp"></span>
         <button class="ghost" onclick="DRAFT=null;renderRoom()">모두 지우기</button>
         <button class="acc" ${left?'disabled':''} onclick="placeDone()">놓기 끝 ▶</button></div>
       <div style="text-align:right;margin-top:10px"><button class="ghost sm" onclick="if(confirm('방에서 나갈까요?'))leaveRoom()">나가기</button></div>`;
     $('tabw').querySelectorAll('.dcell').forEach(el=>el.onclick=()=>{
       const i=+el.dataset.i, r=+el.dataset.r;
-      if(r<DRAFT[i]) DRAFT[i]--; else if(DC.sum(DRAFT)>=n) return toast('동그라미를 다 놓았어요. 다른 칸에서 빼야 더 놓을 수 있어요',1800); else if(DRAFT[i]<R) DRAFT[i]++;
+      if(r<DRAFT[i]) DRAFT[i]--; else if(DC.sum(DRAFT)>=n) return toast('칩을 다 놓았어요. 다른 칸에서 빼야 더 놓을 수 있어요',1800); else if(DRAFT[i]<R) DRAFT[i]++;
       renderRoom(); });
     return;
   }
@@ -402,7 +411,7 @@ function renderRoom(){
   const lastI=LAST&&k?DC.outs(st).indexOf(list[k-1].v):null;
   /* ③ 상대가 아직 놓는 중 */
   if(!op.rd){
-    $('view').innerHTML=`<div class="vs">나 <b>vs</b> ${opName}</div><div class="phase-h">⏳ ${opName}이(가) 동그라미를 놓는 중이에요</div>
+    $('view').innerHTML=`<div class="vs">나 <b>vs</b> ${opName}</div><div class="phase-h">⏳ ${opName}이(가) 칩을 놓는 중이에요</div>
       <div id="tabw">${DC.tableHTML(st,R,me.c,null,{})}</div>`; return;
   }
   /* ④ 끝 */
@@ -412,7 +421,7 @@ function renderRoom(){
       <div class="two"><div><h4>🙋 나 · 맞힘 ${ms}개</h4>${DC.tableHTML(st,R,me.c,myHit,{small:st===2})}</div>
         <div><h4>${ROOM.bot?'🤖 ':''}${opName} · 맞힘 ${os}개${ROOM.bot&&ROOM.botName?` <span class="muted">(${esc(ROOM.botName)})</span>`:''}</h4>${DC.tableHTML(st,R,op.c,opHit,{small:st===2})}</div></div>
       <div class="rollsum"><b>실제로 나온 횟수</b><div style="--bh:90px">${DC.boardHTML(st,null,DC.counts(st,list),{max:Math.max(3,...DC.counts(st,list))})}</div></div>
-      <div class="think">🤔 ${st===2?'많이 나온 합은 무엇인가요? 그 합에 동그라미를 많이 놓은 사람이 유리했나요? 왜 그 합이 많이 나올까요?':'두 사람의 동그라미 모양을 비교해 보세요. 한 칸에 많이 몰아 놓으면 어떻게 될까요?'}</div>
+      <div class="think">🤔 ${st===2?'많이 나온 합은 무엇인가요? 그 합에 칩을 많이 놓은 사람이 유리했나요? 왜 그 합이 많이 나올까요?':'두 사람의 칩 모양을 비교해 보세요. 한 칸에 많이 몰아 놓으면 어떻게 될까요?'}</div>
       <div style="display:flex;gap:8px;justify-content:center;margin-top:14px"><button class="acc" style="font-size:19px;padding:14px 26px" onclick="rematch()">🔁 다시 하기</button><button class="ghost" onclick="leaveRoom()">나가기</button></div>`;
     return;
   }
@@ -480,6 +489,7 @@ function setState(t,ok){ const el=$('classState'); el.textContent=t; el.classLis
 function me(){ return CL.base.child('stu/'+CL.key); }
 function applyCfg(c){
   if(!c) return;
+  showAsk(c.ask);
   const prev=CFG; CFG=c;
   $('pauseOv').classList.toggle('on',!!c.paused); if(c.pauseMsg) $('pauseMsg').textContent=c.pauseMsg;
   const v=+c.ver||0; if(v&&v!==APP_VER&&CL.verWarn!==v){ CL.verWarn=v; toast(v>APP_VER?'⚠ 새 버전이 있어요. 이 화면을 새로고침해 주세요.':'⚠ 선생님 화면이 옛 버전이에요. 선생님께 새로고침을 부탁하세요.',6000); }
@@ -488,6 +498,19 @@ function applyCfg(c){
   if(ROOM){ setTop(); if(!rolling&&ROOM.d&&!ROOM.bot) renderRoom(); return; }   // 대결 중에는 대결 화면 그대로
   if(prev.ph===c.ph&&prev.r===c.r&&prev.rolls===c.rolls&&JSON.stringify(prev.res)===JSON.stringify(c.res)&&(c.ph!=='wait'||(prev.dst===c.dst&&prev.dn===c.dn&&JSON.stringify(prev.rec)===JSON.stringify(c.rec)&&JSON.stringify(prev.pt)===JSON.stringify(c.pt)))){ setTop(); return; }
   render();
+}
+/* ❓ 선생님 질문에 답하기 (내 접속 표시 p.ans 에 저장) */
+let ASK=null;
+function showAsk(a){
+  const on=!!(a&&a.id&&!SOLO); $('askOv').classList.toggle('on',on);
+  if(!on){ ASK=null; return; }
+  if(!ASK||ASK.id!==a.id){ ASK={id:a.id,sent:null}; $('askIn').value=LS.get('dice-ans-'+a.id,''); $('askSt').textContent=''; }
+  $('askQ').textContent=a.q||'';
+}
+function sendAns(){
+  if(!ASK||!CL.base) return; const t=$('askIn').value.trim().slice(0,150); if(!t){ $('askSt').textContent='먼저 써 주세요'; return; }
+  LS.set('dice-ans-'+ASK.id,t);
+  me().child('p').update({ans:{id:ASK.id,t}}).then(()=>{ $('askSt').textContent='✔ 보냈어요. 고쳐서 다시 보낼 수도 있어요.'; }).catch(e=>{ $('askSt').textContent='보내기 실패: '+e.message; });
 }
 function joinClick(){
   const code=$('classCode').value.replace(/\D/g,''), nm=myName();
@@ -526,7 +549,7 @@ function connect(code){
     if(CL.code!==my||!cfgSnap||!bs) return;
     clearTimeout(CL.joinT);
     const b=bs.val(), c=cfgSnap.val()||{};
-    if(b&&b.r===c.r&&DC.validChips(c.st,c.n,b.c)){ MY={chips:b.c.slice(),r:c.r,sentSig:b.c.join(','),sent:b.c}; }   // 새로고침해도 제출한 칩 그대로
+    if(b&&b.r===c.r&&DC.validChips(c.st,DC.chipsFor(c.n),b.c)){ MY={chips:b.c.slice(),r:c.r,sentSig:b.c.join(','),sent:b.c}; }   // 새로고침해도 제출한 칩 그대로
     showMain(); applyCfg(c);
     db.ref('.info/connected').on('value',s=>{ const on=!!s.val(); if(on&&CL.base===base){ const p=me().child('p'); p.onDisconnect().update({online:false}); p.update({online:true,name:myName(),dev:deviceId,ver:APP_VER,t:TS}); } setConn(on); });
     db.ref('.info/serverTimeOffset').on('value',s=>{ OFFSET=+s.val()||0; });

@@ -7,6 +7,16 @@ DC.outs = st => st===2 ? [2,3,4,5,6,7,8,9,10,11,12] : [1,2,3,4,5,6];
 DC.prob = (st,v) => st===2 ? (6-Math.abs(v-7))/36 : 1/6;
 /* 판마다 굴리는 횟수 선택지 (칩 개수 = 굴리는 횟수) */
 DC.nOpts = st => st===2 ? [1,6,36,72] : [1,6,30,60];
+/* 굴리는 횟수가 60번보다 많으면 칩은 60개로 '비율'을 예상 (점수 = 일치도 %) */
+DC.chipsFor = n => n<=60 ? n : 60;
+DC.isPct = n => n>60;
+DC.pscore = (chips,counts,n) => { const C=DC.chipsFor(n); if(C===n) return DC.score(chips,counts);
+  const N=DC.sum(counts)||1; return Math.round(chips.reduce((s,c,i)=>s+Math.min((c||0)/C,(counts[i]||0)/N),0)*1000)/10; };
+DC.unit = n => DC.isPct(n)?'%':'점';
+DC.toPct = (a,tot) => a.map(x=>tot?Math.round(x/tot*1000)/10:0);
+/* 칩 배열을 다른 개수로 비율 맞춰 늘리기 (모의실험용) */
+DC.scaleChips = (c,n) => { const t=DC.sum(c); if(t===n) return c.slice(); const raw=c.map(x=>x/t*n), r=raw.map(Math.floor); let left=n-DC.sum(r);
+  raw.map((x,i)=>[x-Math.floor(x),i]).sort((a,b)=>b[0]-a[0]).forEach(([,i])=>{ if(left>0){ r[i]++; left--; } }); return r; };
 DC.stageName = st => st===2 ? '2단계 · 주사위 두 개의 합' : '1단계 · 주사위 한 개';
 
 function rnd6(){
@@ -14,7 +24,10 @@ function rnd6(){
   catch(e){ return Math.floor(Math.random()*6)+1; }
 }
 /* 굴리기: 1단계는 "3516…" (한 글자 = 한 번), 2단계는 "3561…" (두 글자 = 한 번, 두 주사위) */
-DC.roll = (st,n) => { let s=''; for(let i=0;i<n*(st===2?2:1);i++) s+=rnd6(); return s; };
+DC.roll = (st,n) => { const m=n*(st===2?2:1), out=new Array(m);
+  try{ const a=new Uint32Array(Math.min(m,16384)); for(let i=0;i<m;i+=a.length){ crypto.getRandomValues(a); for(let j=0;j<a.length&&i+j<m;j++) out[i+j]=a[j]%6+1; } }
+  catch(e){ for(let i=0;i<m;i++) out[i]=rnd6(); }
+  return out.join(''); };
 /* 굴린 결과 문자열 → [{a,b,v}] */
 DC.decode = (st,s) => {
   const r=[]; s=String(s||'');
@@ -68,7 +81,7 @@ const PIPS={1:[[50,50]],2:[[27,27],[73,73]],3:[[27,27],[50,50],[73,73]],4:[[27,2
 DC.dieSVG = (v,size,cls) => `<svg class="die ${cls||''}" width="${size}" height="${size}" viewBox="0 0 100 100" aria-label="주사위 ${v}"><rect x="4" y="4" width="92" height="92" rx="18" fill="#fff" stroke="#1d2433" stroke-width="6"/>${(PIPS[v]||[]).map(([x,y])=>`<circle cx="${x}" cy="${y}" r="9.5" fill="${v===1?'#cf3f54':'#1d2433'}"/>`).join('')}</svg>`;
 
 /* 굴린 주사위 전체 (순서대로) */
-DC.allDiceHTML = (st,list) => `<div class="alld s${st}">${list.map((x,i)=>`<span class="ad" title="${i+1}번째">${st===2?DC.dieSVG(x.a,26)+DC.dieSVG(x.b,26)+`<i>${x.v}</i>`:DC.dieSVG(x.a,30)}</span>`).join('')}</div>`;
+DC.allDiceHTML = (st,list) => `${list.length>120?`<div style="color:#6b6f78;font-size:14px">${list.length}번 중 처음 120번만 보여요</div>`:''}<div class="alld s${st}">${list.slice(0,120).map((x,i)=>`<span class="ad" title="${i+1}번째">${st===2?DC.dieSVG(x.a,26)+DC.dieSVG(x.b,26)+`<i>${x.v}</i>`:DC.dieSVG(x.a,30)}</span>`).join('')}</div>`;
 /* 막대 판: chips(내 칩, 없으면 null), counts(실제, 없으면 null), opt.max(눈금 최대), opt.theory(N: 이론값 점선), opt.edit(칩 놓기 가능) */
 DC.boardHTML = (st,chips,counts,opt) => {
   opt=opt||{}; const o=DC.outs(st);
