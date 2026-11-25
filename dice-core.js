@@ -2,7 +2,7 @@
 (function(){
 const DC = {};
 /* 단계별 나올 수 있는 결과 */
-DC.outs = st => st===2 ? [2,3,4,5,6,7,8,9,10,11,12] : [1,2,3,4,5,6];
+DC.outs = st => st===2 ? [1,2,3,4,5,6,7,8,9,10,11,12] : [1,2,3,4,5,6];   // 합 1은 일어나지 않는 사건 (확률 0) 이야기용
 /* 이론 확률 (교사 화면의 '이론값' 표시에만 씀) */
 DC.prob = (st,v) => st===2 ? (6-Math.abs(v-7))/36 : 1/6;
 /* 판마다 굴리는 횟수 선택지 (칩 개수 = 굴리는 횟수) */
@@ -53,10 +53,10 @@ DC.presets = (st,n) => {
     const order=raw.map((x,i)=>[x-Math.floor(x),i]).sort((a,b)=>b[0]-a[0]); for(let k=0;left>0;k++,left--) c[order[k%L][1]]++; return c; };
   const one = i => o.map((_,j)=>j===i?n:0);
   if(st===2) return [
-    {id:'even', name:'모두 고르게', c:n%36===0?[4,3,3,3,3,4,3,3,3,3,4].map(x=>x*n/36):spread(o.map((v,i)=>1+(i%5===0?0.01:0)))},
+    {id:'even', name:'모두 고르게', c:spread(o.map(()=>1))},
     {id:'mid', name:'7 근처에 많이', c:spread(o.map(v=>6-Math.abs(v-7)))},
-    {id:'only7', name:'7에 몽땅', c:one(5)},
-    {id:'ends', name:'양 끝(2·12)에 많이', c:spread(o.map(v=>1+Math.abs(v-7)))},
+    {id:'only7', name:'7에 몽땅', c:one(o.indexOf(7))},
+    {id:'ends', name:'양 끝(2·12)에 많이', c:spread(o.map(v=>v<2?0:1+Math.abs(v-7)))},
   ];
   return [
     {id:'even', name:'모두 고르게', c:spread(o.map(()=>1))},
