@@ -239,6 +239,26 @@ DC.STRATS = [
   {id:'left', name:'왼쪽 몰림', d:'작은 수에 많이'},
   {id:'right', name:'오른쪽 몰림', d:'큰 수에 많이'},
 ];
+/* 대표 전략의 예시 칩 모양 (보여 주기만, 강제 아님) */
+DC.stratChips = (id,st,n) => {
+  const o=DC.outs(st), ok=v=>st!==2||v>=2;   // 2단계 합 1은 일어나지 않으니 빼고
+  const W={flat:v=>1, flat2:v=>1, mid:v=>st===2?6-Math.abs(v-7):[1,2,3,3,2,1][v-1], left:v=>st===2?13-v:7-v, right:v=>st===2?v-1:v};
+  const w=o.map(v=>ok(v)?W[id](v):0), t=DC.sum(w), raw=w.map(x=>x/t*n), c=raw.map(Math.floor), mid=(o.indexOf(st===2?7:3)+o.indexOf(st===2?7:4))/2;
+  let left=n-DC.sum(c); raw.map((x,i)=>[x-Math.floor(x),Math.abs(i-mid),i]).filter(x=>w[x[2]]).sort((a,b)=>(b[0]-a[0])||(a[1]-b[1])).forEach(([,,i])=>{ if(left>0){ c[i]++; left--; } });   // 남는 칩은 가운데 쪽부터
+  if(id==='flat2'){ const idx=o.map((v,i)=>ok(v)?i:-1).filter(i=>i>=0), a=idx[0], z=idx[idx.length-1];   // 평평에서 양 끝 칩을 1~2개씩 가운데로
+    const to=st===2?[o.indexOf(7),o.indexOf(7)]:[2,3], k=Math.max(1,Math.min(2,Math.floor(n/idx.length/3)));
+    [a,z].forEach((i,j)=>{ const m=Math.min(k,c[i]); c[i]-=m; c[to[j]]+=m; }); }
+  return c; };
+DC.stratPics = (st,n,sel,onclick) => `<div class="spics">${DC.STRATS.map(x=>{ const c=DC.stratChips(x.id,st,n);
+  return `<div class="spic ${sel===x.id?'sel':''}" ${onclick?`onclick="${onclick}('${x.id}')"`:''} title="${x.d}"><b>${x.name}</b><div class="board-mini">${DC.boardHTML(st,c,null,{max:Math.max(...c,1),step:1})}</div></div>`; }).join('')}</div>`;
+DC.css += `
+.spics{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}
+.spic{background:#fff;border:2px solid #e6dfd1;border-radius:10px;padding:5px 5px 2px;text-align:center;min-width:0}
+.spic b{font-size:14px;white-space:nowrap}.spic.sel{border-color:#b8730a;background:#fff8e8}
+.spic[onclick]{cursor:pointer}
+.spic .board-mini{--bh:38px}.spic .board{gap:1px}.spic .bnum{display:none}.spic .blab{font-size:10px!important;margin-top:1px}
+.spic .chp{left:8%;right:8%;border-width:2px;background-size:100% 100%!important}
+`;
 DC.stratName = id => (DC.STRATS.find(x=>x.id===id)||{}).name||'';
 DC.hits = (st,c,list) => { const o=DC.outs(st), h=o.map(()=>0); for(const x of list){ const i=o.indexOf(x.v); if(i>=0&&h[i]<(c[i]||0)) h[i]++; } return h; };
 window.DC = DC;
