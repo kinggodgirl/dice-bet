@@ -195,11 +195,11 @@ DC.tableHTML = (st,rows,c,hit,opt) => {
   opt=opt||{}; const o=DC.outs(st);
   let h=`<div class="dtab ${opt.edit?'edit':''} ${opt.small?'small':''} s${st}" style="--cols:${o.length};--rows:${rows}">`;
   o.forEach((v,i)=>{
-    const ci=c?c[i]||0:0, hi=hit?hit[i]||0:0;
-    h+=`<div class="dcol ${opt.last===i?'last':''}" data-i="${i}"><div class="dcnt">${opt.hideCnt?'':(hit&&ci?`<b>${hi}</b>/`:'')+(opt.hideCnt?'':ci)}</div>`;
+    const ci=c?c[i]||0:0, hi=hit?hit[i]||0:0, mi=opt.miss?opt.miss[i]||0:0;   // mi = 칩이 없어서 놓친 주사위 수 (빨간 ✖로 칩 위에 쌓음)
+    h+=`<div class="dcol ${opt.last===i?'last':''}" data-i="${i}"><div class="dcnt">${opt.hideCnt?'':(hit&&ci?`<b>${hi}</b>/`:'')+(opt.hideCnt?'':ci)}${mi&&ci+mi>rows?`<em>✖${mi}</em>`:''}</div>`;
     for(let r=rows-1;r>=0;r--){
-      const cls = r<hi?'hit':(r<ci?'on':'');
-      h+=`<div class="dcell ${cls}" data-i="${i}" data-r="${r}">${cls==='hit'?'✔':(cls==='on'?'':'')}</div>`;
+      const cls = r<hi?'hit':(r<ci?'on':(r<ci+mi?'miss':''));
+      h+=`<div class="dcell ${cls}" data-i="${i}" data-r="${r}">${cls==='hit'?'✔':cls==='miss'?'✖':''}</div>`;
     }
     h+=`<div class="dlab">${v}</div></div>`;
   });
@@ -215,6 +215,9 @@ DC.css += `
 .dtab.edit .dcell{cursor:pointer}
 .dcell.on{border:4px solid #d9930f;background:#fff8e8}
 .dcell.hit{border:4px solid #2e8b57;background:#2e8b57}
+.dcell.miss{border:2px dashed #e7a3ad;background:#fff;color:#cf3f54;font-size:20px}
+.dcnt em{font-style:normal;color:#cf3f54;margin-left:2px}
+.dtab.small .dcell.miss{font-size:13px;border-width:1px}
 .dlab{text-align:center;font-weight:900;font-size:22px;font-family:"Times New Roman",Times,serif;border-top:3px solid #1d2433;padding-top:2px}
 .dtab.s2 .dlab{font-size:18px}
 .dtab.small .dcell{max-width:22px;max-height:22px;border-width:2px;font-size:11px}
@@ -222,6 +225,17 @@ DC.css += `
 .dtab.small{gap:2px}.dtab.small .dcol{gap:2px}.dtab.small .dlab{font-size:15px}.dtab.small .dcnt{font-size:12px;height:16px}
 `;
 /* 맞힌 수: 굴린 결과 순서대로, 그 칸에 남은 동그라미가 있으면 하나씩 체크 */
+/* 놓친 수: 그 칸에 나왔는데 칩이 없어서(또는 다 써서) 못 맞힌 주사위 */
+DC.misses = (st,c,list) => { const cnt=DC.counts(st,list), h=DC.hits(st,c,list); return cnt.map((x,i)=>x-h[i]); };
+/* 이번 판 나의 전략 (고르기만, 강제 아님) */
+DC.STRATS = [
+  {id:'flat', name:'평평', d:'모든 칸에 고르게'},
+  {id:'flat2', name:'평평 응용', d:'고르게 놓고 1~4개만 바꾸기'},
+  {id:'mid', name:'중앙 몰림', d:'가운데 칸에 많이'},
+  {id:'left', name:'왼쪽 몰림', d:'작은 수에 많이'},
+  {id:'right', name:'오른쪽 몰림', d:'큰 수에 많이'},
+];
+DC.stratName = id => (DC.STRATS.find(x=>x.id===id)||{}).name||'';
 DC.hits = (st,c,list) => { const o=DC.outs(st), h=o.map(()=>0); for(const x of list){ const i=o.indexOf(x.v); if(i>=0&&h[i]<(c[i]||0)) h[i]++; } return h; };
 window.DC = DC;
 })();
