@@ -21,6 +21,10 @@ DC.scaleChips = (c,n) => { const t=DC.sum(c); if(t===n) return c.slice(); const 
   raw.map((x,i)=>[x-Math.floor(x),i]).sort((a,b)=>b[0]-a[0]).forEach(([,i])=>{ if(left>0){ r[i]++; left--; } }); return r; };
 /* 반 전체 칩 예측: 다 굴리는 데 걸리는 시간(ms). 학생·교사 화면이 같은 값을 써야 막대가 같이 쌓임 */
 DC.animDur = n => n<=6 ? n*220 : Math.min(5000, Math.max(1500, n*90));
+/* 활동 이름 (수업·교사 화면·슬라이드 공통. README '활동 이름표'와 같게) */
+DC.ACT = {chip:'활동 1 · 칩 예측', duel1:'활동 2 · 눈 대결', duel2:'활동 3 · 합 대결', sim:'모의실험', many:'많이 굴리기', table:'합 표', ask:'생각 모으기', peek:'학생 화면 보기'};
+DC.duelName = st => st===2 ? '합 대결' : '눈 대결';
+DC.duelAct = st => st===2 ? DC.ACT.duel2 : DC.ACT.duel1;
 DC.stageName = st => st===2 ? '2단계 · 주사위 두 개의 합' : '1단계 · 주사위 한 개';
 
 function rnd6(){
