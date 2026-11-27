@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>주사위 칩 대결</title>
+<title>주사위 확률 게임</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="common.css">
@@ -90,7 +90,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
   <!-- 첫 화면 -->
   <div id="home">
     <div class="box card">
-      <h1>🎲 주사위 칩 대결</h1>
+      <h1>🎲 주사위 확률 게임</h1>
       <div class="sub">주사위를 여러 번 굴리면 무엇이 많이 나올까?</div>
       <label class="small">번호와 이름 (예: 7 김민준)</label>
       <input id="myName" maxlength="10" autocomplete="off">
@@ -105,7 +105,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
   <!-- 게임 화면 -->
   <div id="main" class="hide">
     <div class="top">
-      <div class="ttl" id="stageTtl">🎲 주사위 칩 대결</div>
+      <div class="ttl" id="stageTtl">🎲 주사위 확률 게임</div>
       <span class="pill" id="who"></span>
       <span class="pill tot" id="totPill">누적 0점</span>
       <span class="pill"><span class="dot" id="connDot"></span><span id="connTxt">연결 중</span></span>
@@ -125,7 +125,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261127.3;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261127.4;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -149,7 +149,7 @@ const histKey=()=>'dice-hist-'+(SOLO?'solo':(CL.code+'-'+myName()));
 /* ---------- 화면 ---------- */
 function setTop(){
   const inClass=CFG.ph==='bet'||CFG.ph==='roll', ds=ROOM&&ROOM.d?ROOM.d.st:duelSet().st;
-  $('stageTtl').textContent=(inClass&&!ROOM?'🪙 ':'⚔ ')+DC.stageName(inClass&&!ROOM?CFG.st:ds);
+  $('stageTtl').textContent=inClass&&!ROOM?'🪙 '+DC.ACT.chip+' · '+(CFG.st===2?'두 주사위의 합':'주사위 한 개'):'⚔ '+DC.duelAct(ds);
   if(!SOLO&&!(inClass&&!ROOM)){ const R=rec(); $('totPill').textContent=(PT()?`💰 ${myBal()}점 · `:'')+`${R.w}승 ${R.l}패`; return; }
   const t=SOLO?HIST.reduce((s,h)=>s+h.s,0):((CFG.tot||{})[CL.key]||{}).s||0;
   $('totPill').textContent=SOLO?`최고 ${HIST.reduce((m,h)=>Math.max(m,h.s),0)}점`:`누적 ${t}점`;
@@ -305,9 +305,9 @@ function renderLobby(){
   const {st,n}=duelSet();
   const open=Object.entries(ROOMS).filter(([rid,r])=>r&&r.a&&!r.b&&r.a.on&&r.st===st&&r.n===n&&r.a.key!==CL.key).sort((x,y)=>(y[1].t||0)-(x[1].t||0));
   const R=rec();
-  $('view').innerHTML=`<div class="phase-h">⚔ 1:1 칩 대결</div>
+  $('view').innerHTML=`<div class="phase-h">⚔ ${DC.duelAct(st)} <span style="font-size:17px;color:var(--muted)">(1:1)</span></div>
     <div class="phase-d"><b>${DC.stageName(st)}</b> · 칩 <b>${n}개</b>를 표에 놓고, 둘이 번갈아 <b>${n}번</b> 굴려요.<br>${st===2?'두 주사위 눈의 합':'나온 눈'}에 내 칩이 있으면 ✔ 맞힘! 더 많이 맞힌 사람이 이겨요.</div>
-    ${SOLO?`<div class="cards">${[1,2].map(s=>`<button class="${s===soloSt?'sel':''}" onclick="soloSt=${s};render()"><b>${DC.stageName(s)}</b></button>`).join('')}</div>`:''}
+    ${SOLO?`<div class="cards">${[1,2].map(s=>`<button class="${s===soloSt?'sel':''}" onclick="soloSt=${s};render()"><b>${DC.duelName(s)}</b><br><span style="font-size:14px">${DC.stageName(s)}</span></button>`).join('')}</div>`:''}
     ${SOLO?'':`<div class="lobby">
       <button class="acc big" onclick="createRoom()">＋ 방 만들기</button>
       <div class="joinrow"><input id="ridIn" maxlength="3" inputmode="numeric" placeholder="방 번호"><button onclick="joinRoom($('ridIn').value)">들어가기</button></div>
