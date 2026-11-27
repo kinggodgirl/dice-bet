@@ -43,7 +43,7 @@
 ## 처음 한 번: Firebase 규칙
 「단원 마무리」 앱과 같은 Firebase 프로젝트(daicheong-math)를 씁니다.
 Firebase 콘솔 → Realtime Database → 규칙에 이 저장소의 `database.rules.json` 전체를 붙여 넣고 **게시**하세요.
-(기존 `classes` 규칙은 그대로이고 `dice` 부분만 더해졌습니다.)
+⚠ 두 앱이 **한 규칙 칸을 같이 씁니다.** 이 파일에는 「단원 마무리」의 `classes`(숫자야구 `games`·문제 은행 `bank` 포함)와 주사위 게임의 `dice`가 모두 들어 있어요. 어느 저장소의 `database.rules.json`을 붙여 넣어도 결과가 같도록 두 저장소 파일을 똑같이 유지하세요(한쪽만 고치면 다른 앱 규칙이 지워집니다).
 
 ## 고칠 때
 `index.html`과 `teacher.html`의 `APP_VER`를 같이 올리세요. 버전이 다르면 양쪽 화면에 새로고침 안내가 뜹니다.

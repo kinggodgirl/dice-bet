@@ -44,6 +44,35 @@
             }
           }
         },
+        "games": {
+          ".read": "auth != null",
+          ".write": "auth != null && (root.child('classes').child($code).child('owner').val() === auth.uid || root.child('classes').child($code).child('owners').child(auth.uid).exists())",
+          "$room": {
+            ".validate": "$room.matches(/^[0-9]{4}$/)",
+            "t": {
+              ".write": "auth != null && !data.exists()",
+              ".validate": "newData.isNumber()"
+            },
+            "a": {
+              ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid) && (!newData.exists() || newData.child('uid').val() === auth.uid)",
+              ".validate": "newData.hasChildren(['uid','name'])"
+            },
+            "b": {
+              ".write": "auth != null && (!data.exists() || data.child('uid').val() === auth.uid) && (!newData.exists() || newData.child('uid').val() === auth.uid)",
+              ".validate": "newData.hasChildren(['uid','name'])"
+            },
+            "s": {
+              ".validate": "newData.hasChildren()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "bank": {
+          ".read": "auth != null",
+          ".write": "auth != null && (root.child('classes').child($code).child('owner').val() === auth.uid || root.child('classes').child($code).child('owners').child(auth.uid).exists())"
+        },
         "$other": {
           ".validate": false
         }
