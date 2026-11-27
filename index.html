@@ -125,7 +125,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261127.4;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261127.5;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -175,6 +175,7 @@ function renderBet(){
   const what=st===2?'주사위 두 개를 함께 굴려 나온 두 눈의 합':'주사위 한 개를 굴려 나온 눈';
   $('view').innerHTML=`<div class="phase-h">🪙 칩 ${C}개를 놓으세요</div>
     <div class="phase-d">${pct?`${what}을 <b>${n.toLocaleString()}번</b> 기록해요. 칩 ${C}개로 각 수가 나올 <b>비율</b>을 예상해서 놓으세요.<br>내 칩의 비율과 <b>실제로 나온 비율이 겹친 만큼</b>이 점수(일치도 %)예요. (막대를 누르거나 끌어도 돼요)`:`${what}을 <b>${n.toLocaleString()}번</b> 기록해요. 각 수가 <b>몇 번 나올지</b> 예상해서 칩을 놓으세요.${DC.step(n)>1?` <b>＋ 한 번에 칩 ${DC.step(n)}개</b>씩 놓이고, 작은 ＋1·－1로 1개씩 고칠 수 있어요.`:''}<br>나중에 <b>실제로 나온 횟수와 겹친 칩</b>만큼 점수가 돼요. (막대를 누르거나 끌어도 돼요)`}</div>
+    ${C>=6?`<div class="sprow"><b>🧭 대표 전략 모양</b> <span class="muted">(참고만 해요 · 어떻게 놓을지는 내가 정해요)</span>${DC.stratPics(st,C)}</div>`:''}
     <div id="bwrap" style="--bh:${st===2?240:270}px"></div>
     <div class="left"><span class="big" id="leftTxt"></span><span class="sp"></span>
       <button class="ghost" onclick="clearChips()">모두 빼기</button>
@@ -292,8 +293,9 @@ const step=st=>st===2?2:1;
 function duelSet(){ return SOLO?{st:soloSt,n:DC.duelN(soloSt)[0]}:{st:+CFG.dst||1,n:+CFG.dn||DC.duelN(+CFG.dst||1)[0]}; }
 /* 포인트 (교사가 켜면 cfg.pt = {start,max,streak}, 잔액은 cfg.bal, 연속 상대는 cfg.pair) */
 let DRAFTBET=null, DRAFTSP=null;   // DRAFTSP = 이번 판 나의 전략 (고르기만, 강제 아님)
+function pickSp(id){ DRAFTSP=DRAFTSP===id?null:id; renderRoom(); }
 function spRow(){ return `<div class="sprow"><b>🧭 이번 판 나의 전략은?</b> <span class="muted">(골라 두면 끝나고 돌아보기 좋아요 · 안 골라도 돼요)</span>
-    <div class="seg2">${DC.STRATS.map(x=>`<button class="${DRAFTSP===x.id?'sel':''}" title="${x.d}" onclick="DRAFTSP=DRAFTSP==='${x.id}'?null:'${x.id}';renderRoom()">${x.name}</button>`).join('')}</div>
+    ${DC.stratPics(ROOM.d.st,ROOM.d.n,DRAFTSP,'pickSp')}
     ${DRAFTSP?`<div class="muted" style="font-size:14px;margin-top:2px">${esc(DC.STRATS.find(x=>x.id===DRAFTSP).d)}</div>`:''}</div>`; }
 function PT(){ return !SOLO&&CFG.pt&&CFG.pt.on?CFG.pt:null; }
 function myBal(){ const p=PT(); if(!p) return 0; const b=(CFG.bal||{})[CL.key]; return b==null?p.start:b; }
