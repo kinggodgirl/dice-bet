@@ -19,6 +19,8 @@ DC.toPct = (a,tot) => a.map(x=>tot?Math.round(x/tot*1000)/10:0);
 /* 칩 배열을 다른 개수로 비율 맞춰 늘리기 (모의실험용) */
 DC.scaleChips = (c,n) => { const t=DC.sum(c); if(t===n) return c.slice(); const raw=c.map(x=>x/t*n), r=raw.map(Math.floor); let left=n-DC.sum(r);
   raw.map((x,i)=>[x-Math.floor(x),i]).sort((a,b)=>b[0]-a[0]).forEach(([,i])=>{ if(left>0){ r[i]++; left--; } }); return r; };
+/* 반 전체 칩 예측: 다 굴리는 데 걸리는 시간(ms). 학생·교사 화면이 같은 값을 써야 막대가 같이 쌓임 */
+DC.animDur = n => n<=6 ? n*220 : Math.min(5000, Math.max(1500, n*90));
 DC.stageName = st => st===2 ? '2단계 · 주사위 두 개의 합' : '1단계 · 주사위 한 개';
 
 function rnd6(){

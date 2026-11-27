@@ -123,7 +123,7 @@ label.small{display:block;font-size:14px;color:var(--muted);margin:14px 0 6px}
 <div class="toast" id="toast"></div>
 
 <script>
-const APP_VER=20261125.8;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
+const APP_VER=20261127.1;   // teacher.html 과 같은 값이어야 함 (고칠 때마다 올리기)
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
@@ -210,7 +210,7 @@ function sendBet(){
 }
 
 /* 굴리기 보여 주기: 모두 같은 시각(서버 시간)에 맞춰 하나씩 */
-function animDur(n){ return Math.min(9000, n*220); }
+function animDur(n){ return DC.animDur(n); }
 function stopAnim(){ cancelAnimationFrame(animT); animT=null; }
 function renderRoll(){
   const st=CFG.st, n=CFG.n, list=DC.decode(st,CFG.rolls);
@@ -351,7 +351,7 @@ function leaveRoom(){
     ref.off(); ref.child(ROOM.slot).onDisconnect().cancel().catch(()=>{});
     const op=d[other(ROOM.slot)];
     if(!d.b||(op&&op.on===false)) ref.remove().catch(()=>{}); else ref.child(ROOM.slot).update({on:false}).catch(()=>{}); }
-  clearTimeout(rollAnimT); clearTimeout(botT); ROOM=null; rolling=false; LS.set('dice-room',null); render();
+  clearTimeout(rollAnimT); clearTimeout(botT); clearTimeout(autoT); ROOM=null; rolling=false; LS.set('dice-room',null); render();
 }
 /* 방 데이터가 바뀜 → 새로 굴린 게 있으면 굴리는 모습을 먼저 보여 줌 */
 function onRoom(d){
@@ -369,12 +369,17 @@ function animRoll(){
   const spin=()=>{ if(!ROOM){ rolling=false; return; } i++;
     const a=1+Math.floor(Math.random()*6), b=1+Math.floor(Math.random()*6);
     if(box) box.innerHTML=st===2?DC.dieSVG(a,84,'spin')+DC.dieSVG(b,84,'spin'):DC.dieSVG(a,96,'spin');
-    if(i<8) rollAnimT=setTimeout(spin,80);
-    else { SHOWN++; rolling=false; LAST=x; renderRoom(); const c2=Math.floor(String(ROOM.d.rolls||'').length/step(st)); if(c2>SHOWN) setTimeout(animRoll,350); else botTurn(); }
+    if(i<SPIN_N) rollAnimT=setTimeout(spin,55);   // 예전 8번×80ms → 5번×55ms (빠르게)
+    else { SHOWN++; rolling=false; LAST=x; renderRoom(); const c2=Math.floor(String(ROOM.d.rolls||'').length/step(st)); if(c2>SHOWN) setTimeout(animRoll,150); else botTurn(); }
   };
   spin();
 }
 let LAST=null;
+const SPIN_N=5;
+/* ⚡ 내 차례에 저절로 굴리기 (이 기기에만 기억) */
+let AUTO=!!LS.get('dice-auto',false), autoT=null;
+function setAuto(on){ AUTO=!!on; LS.set('dice-auto',AUTO); renderRoom(); }
+function autoRoll(mine){ clearTimeout(autoT); if(AUTO&&mine) autoT=setTimeout(()=>{ autoT=null; doRoll(); },450); }
 function renderRoom(){
   const d=ROOM.d; if(!d) { $('view').innerHTML='<div class="muted">방에 들어가는 중…</div>'; return; }
   const st=d.st, n=d.n, R=DC.rows(st,n), me=d[ROOM.slot]||{}, op=d[other(ROOM.slot)]||null;
@@ -432,7 +437,9 @@ function renderRoom(){
     <div class="diebox" id="dieBox">${x?(st===2?DC.dieSVG(x.a,84)+DC.dieSVG(x.b,84)+`<span class="sumv">= ${x.v}</span>`:DC.dieSVG(x.a,96)):'<span class="muted">처음 굴리기를 기다려요</span>'}</div>
     <div style="text-align:center;margin-bottom:12px">${mine?`<button class="acc rollbtn" onclick="doRoll()">🎲 굴리기</button>`:`<div class="wait">${rolling?'굴리는 중…':`${opName}의 차례예요`}</div>`}</div>
     <div id="tabw">${DC.tableHTML(st,R,me.c,myHit,{last:lastI})}</div>
+    <div style="text-align:center;margin-top:10px"><label style="font-size:16px;font-weight:700;cursor:pointer"><input type="checkbox" ${AUTO?'checked':''} onchange="setAuto(this.checked)" style="width:20px;height:20px;vertical-align:-4px"> ⚡ 내 차례에 저절로 굴리기</label></div>
     ${op.on===false&&!ROOM.bot?`<div class="sent warn" style="margin-top:10px">${opName}의 연결이 끊겼어요. 기다리거나 <button class="sm ghost" onclick="leaveRoom()">나가기</button></div>`:''}`;
+  autoRoll(mine);
 }
 function betRow(op){
   const p=PT(); if(!p||ROOM.bot) return '';
@@ -471,7 +478,7 @@ function botRoom(){
 function botTurn(){
   if(!ROOM||!ROOM.bot) return; const d=ROOM.d, k=Math.floor(d.rolls.length/step(d.st));
   if(!d.a.rd||k>=d.n||k%2===0) return;
-  clearTimeout(botT); botT=setTimeout(()=>{ if(!ROOM||!ROOM.bot||ROOM.d!==d) return; d.rolls+=DC.roll(d.st,1); onRoom(d); },900);
+  clearTimeout(botT); botT=setTimeout(()=>{ if(!ROOM||!ROOM.bot||ROOM.d!==d) return; d.rolls+=DC.roll(d.st,1); onRoom(d); },450);
 }
 
 /* ---------- 수업 연결 (Firebase Realtime Database) ----------
